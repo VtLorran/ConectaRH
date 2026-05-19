@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 ConectaRH
 
-## Getting Started
+> Transformando a gestão de pessoas e conectando talentos ao sucesso da empresa.
 
-First, run the development server:
+[![Licença](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Status do Projeto](https://img.shields.io/badge/Status-Em%20Desenvolvimento-green)](#)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+O **ConectaRH** é uma plataforma inovadora de gestão de Recursos Humanos (HRTech) projetada para centralizar, simplificar e otimizar a relação entre o departamento de RH e os colaboradores. O sistema oferece desde o onboarding de novos funcionários até a gestão de ponto, folha de pagamento e avaliações de desempenho.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ✨ Funcionalidades
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* **👤 Painel do Colaborador:** Acesso individual para consulta de holerites, espelho de ponto e banco de horas.
+* **⏰ Gestão de Ponto Eletrônico:** Registro de entrada, pausas e saída de forma intuitiva.
+* **📈 Avaliação de Desempenho:** Módulo para feedbacks 360º, autoavaliação e acompanhamento de metas (OKRs).
+* **🤝 Recrutamento e Seleção (ATS):** Cadastro de vagas, triagem de currículos e gestão do funil de candidatos.
+* **🏢 Gestão de Benefícios:** Controle de vales, plano de saúde e benefícios flexíveis.
+* **📊 Dashboards e Relatórios:** Gráficos interativos para a diretoria acompanhar indicadores importantes do setor.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Tecnologias Utilizadas
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+O projeto foi construído com foco em performance e tipagem segura, utilizando as seguintes tecnologias:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* **[Next.js](https://nextjs.org/)** - Framework React utilizado para a interface de usuário (Front-end) e para a construção das rotas de API (Back-end).
+* **[TypeScript](https://www.typescriptlang.org/)** - Superconjunto de JavaScript que adiciona tipagem estática, garantindo um código mais seguro e escalável.
+* **[Node.js](https://nodejs.org/)** - Ambiente de execução JavaScript.
