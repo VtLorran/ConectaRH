@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Perfis de acesso no sistema (tanto para quem já trabalha quanto para os novos)
+enum UserRole {
+  ADMIN
+  USER
+}
+
+// Estados do processo de admissão
+enum AdmissionStatus {
+  INVITED // Link enviado por e-mail, aguardando preenchimento do colaborador
+  SUBMITTED // Colaborador preencheu e enviou de volta (opcional, se houver etapa intermediária)
+  UNDER_REVIEW // Colaborador enviou e o RH está analisando os dados/documentos
+  ACTIVE // Aprovado / Contratado definitivamente (Gera um User ativo)
+  REJECTED // Recusado pelo RH
+}
+
+// 1. USUÁRIOS (Quem efetivamente faz login no sistema)
+model User {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  name     String
+  cpf      String   @unique
+  password String? // Opcional no início, até que o usuário crie a senha no primeiro acesso
+  role     UserRole @default(USER)
+  avatar   String? // URL da foto do usuário
+
+  // Relacionamentos:
+  // Templates criados por este usuário (caso seja um Admin/RH)
+  templates  AdmissionTemplate[]
+  // Admissões que este usuário iniciou/gerenciou
+  admissions Admission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// 2. TEMPLATES DE ADMISSÃO (Os padrões que o RH salva para não repetir trabalho)
+model AdmissionTemplate {
+  id          String  @id @default(uuid())
+  name        String // Ex: "Padrão Desenvolvedor CLT", "Estágio Administrativo"
+  description String?
+
+  // Quais campos/documentos serão exigidos (ex: ["rg", "comprovante_residencia", "diploma"])
+  requiredFields Json
+
+  // Quem criou este padrão
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  // Histórico de admissões que usaram este padrão
+  admissions Admission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admission_templates")
+}
+
+// 3. PROCESSO DE ADMISSÃO (O fluxo de contratação de um novo colaborador)
+model Admission {
+  id                String          @id @default(uuid())
+  candidateName     String
+  candidateEmail    String
+  candidateCpf      String
+  candidatePassword String?
+  candidateAvatar   String? // URL da foto que o colaborador vai enviar, exibida na listagem
+  status            AdmissionStatus @default(INVITED)
+  justification     String? // Justificativa de correção ou cancelamento enviada pelo RH
+
+  // O NOVO CAMPO: O papel que este colaborador terá no sistema assim que for aprovado
+  candidateRole UserRole @default(USER)
+
+  // Configuração dos campos exigidos (copiado do template ou customizado no modal)
+  formConfig Json
+
+  // Dados e documentos que o candidato preencheu e enviou de volta
+  formData Json?
+
+  // Quem no RH iniciou esse processo de admissão
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  // Qual template de padrão foi utilizado (opcional)
+  templateId String?
+  template   AdmissionTemplate? @relation(fields: [templateId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Regra de segurança: impede duplicidade de processos ativos para o mesmo CPF ao mesmo tempo
+  @@unique([candidateCpf, status])
+  @@map("admissions")
+}
