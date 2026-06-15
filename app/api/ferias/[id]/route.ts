@@ -23,7 +23,7 @@ async function getAuthUser() {
 // PATCH: Atualiza o status de uma solicitação de férias (Aprovar/Recusar/Editar)
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<any> }
 ) {
   try {
     const user = await getAuthUser();
@@ -182,7 +182,7 @@ export async function PATCH(
 // DELETE: Cancela/Exclui uma solicitação de férias
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<any> }
 ) {
   try {
     const user = await getAuthUser();

@@ -22,7 +22,7 @@ async function getAuthUser() {
 // DELETE: Exclui um registro de ponto específico (Restrito a ADMIN/RH/DP)
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<any> }
 ) {
   try {
     const user = await getAuthUser();

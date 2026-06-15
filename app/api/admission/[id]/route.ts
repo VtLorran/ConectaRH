@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import prisma from "../../../../lib/prisma";
+import prisma from "@/lib/prisma";
 import bycript from "bcrypt";
 import { sendApprovalEmail, sendRefusedPermanentEmail, sendRefusedForCorrectionEmail } from "@/lib/mail";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<any> },
 ) {
   try {
     const { id: admissionId } = await params;
-
+    
     const admission = await prisma.admission.findUnique({
       where: { id: admissionId },
       select: {
@@ -65,7 +65,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<any> },
 ) {
   try {
     const { id: admissionId } = await params;
@@ -127,7 +127,7 @@ export async function PUT(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<any> },
 ) {
   try {
     const { id: admissionId } = await params;

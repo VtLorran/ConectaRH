@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<any> },
 ) {
   try {
     const { id } = await params;
-
+    
     const userData = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -115,7 +114,7 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<any> },
 ) {
   try {
     const { id } = await params;

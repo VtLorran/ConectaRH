@@ -574,7 +574,6 @@ export default function ProfilePage() {
     }
 
     let tempDate: Date;
-    let formattedDate: string;
 
     if (admissionStr) {
       if (admissionStr.includes("/")) {
@@ -601,7 +600,7 @@ export default function ProfilePage() {
     const d = String(tempDate.getDate()).padStart(2, "0");
     const m = String(tempDate.getMonth() + 1).padStart(2, "0");
     const y = tempDate.getFullYear();
-    formattedDate = `${d}/${m}/${y}`;
+    const formattedDate = `${d}/${m}/${y}`;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
