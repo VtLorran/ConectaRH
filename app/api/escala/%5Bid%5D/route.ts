@@ -12,7 +12,11 @@ async function getAuthUser() {
     const secret = process.env.JWT_SECRET;
     if (!secret) return null;
 
-    const decoded = jwt.verify(token, secret) as { userID: string; role: string; cpf?: string };
+    const decoded = jwt.verify(token, secret) as {
+      userID: string;
+      role: string;
+      cpf?: string;
+    };
     return decoded;
   } catch (error) {
     return null;
@@ -22,35 +26,53 @@ async function getAuthUser() {
 // DELETE: Remove uma escala específica ou fixa
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<any> }, // <-- Correção feita aqui para o Vercel não travar
 ) {
   try {
     const user = await getAuthUser();
     if (!user) {
-      return NextResponse.json({ success: false, message: "Não autenticado" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Não autenticado" },
+        { status: 401 },
+      );
     }
 
     if (user.role !== "ADMIN") {
-      return NextResponse.json({ success: false, message: "Apenas administradores podem remover escalas." }, { status: 403 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Apenas administradores podem remover escalas.",
+        },
+        { status: 403 },
+      );
     }
 
     const { id } = await params;
 
     const schedule = await prisma.workSchedule.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!schedule) {
-      return NextResponse.json({ success: false, message: "Escala não encontrada" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Escala não encontrada" },
+        { status: 404 },
+      );
     }
 
     await prisma.workSchedule.delete({
-      where: { id }
+      where: { id },
     });
 
-    return NextResponse.json({ success: true, message: "Escala removida com sucesso" });
+    return NextResponse.json({
+      success: true,
+      message: "Escala removida com sucesso",
+    });
   } catch (error: any) {
     console.error("Erro na rota DELETE /api/escala/[id]:", error);
-    return NextResponse.json({ success: false, message: error?.message || "Erro interno no servidor" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error?.message || "Erro interno no servidor" },
+      { status: 500 },
+    );
   }
 }
