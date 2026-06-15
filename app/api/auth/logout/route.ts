@@ -7,7 +7,6 @@ export async function POST() {
       { status: 200 }
     );
 
-    // Remove o cookie contendo o token JWT
     response.cookies.delete("token");
 
     return response;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   User,
   Mail,
@@ -13,8 +13,27 @@ import {
   Eye,
   Download,
   X,
+  Cake,
+  Calendar,
+  Clock3,
+  Palmtree,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  Plus,
+  Trash2,
+  AlertCircle,
+  MessageSquare,
+  Check,
 } from "lucide-react";
-import { formatCPF, formatPhone } from "@/lib/masks";
+import { formatCPF, formatPhone, formatDate } from "@/lib/masks";
+import SectionComponent from "@/components/SectionComponent";
+import TittleHeader from "@/components/TittleHeader";
+import Breadcrumb from "@/components/Breadcrumb";
+import CardComponentCollaborator from "@/components/CardComponentColaborattor";
+import Modal from "@/components/Modal";
+import InputField from "@/components/InputField";
+import SubmitButton from "@/components/SubmitButton";
 
 interface UserProfile {
   id: string;
@@ -22,8 +41,18 @@ interface UserProfile {
   email: string;
   cpf: string;
   role: string;
+  status: string;
+  createdAt: string;
   avatar?: string | null;
-  admissionData?: Record<string, string> | null;
+  jobPosition?: {
+    id: string;
+    name: string;
+    department: {
+      id: string;
+      name: string;
+    };
+  } | null;
+  admissionData?: Record<string, any> | null;
 }
 
 export default function ProfilePage() {
@@ -39,6 +68,29 @@ export default function ProfilePage() {
   const [activeImageBase64, setActiveImageBase64] = useState<string | null>(null);
   const [activeImageName, setActiveImageName] = useState<string>("");
 
+  // Estados do Scroll dos Cards
+  const [vacation, setVacation] = useState("");
+  const [dailyWorkHours, setDailyWorkHours] = useState("");
+  const [performance, setPerformance] = useState("");
+
+  // Estados de Férias
+  const [vacations, setVacations] = useState<any[]>([]);
+  const [loadingVacations, setLoadingVacations] = useState(true);
+  const [isRequestingVacation, setIsRequestingVacation] = useState(false);
+  const [reqStartDate, setReqStartDate] = useState("");
+  const [reqEndDate, setReqEndDate] = useState("");
+  const [reqComment, setReqComment] = useState("");
+  const [reqSubmitting, setReqSubmitting] = useState(false);
+  const [reqError, setReqError] = useState("");
+  const [reqSuccess, setReqSuccess] = useState("");
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [showLeftGradient, setShowLeftGradient] = useState(false);
+  const [showRightGradient, setShowRightGradient] = useState(true);
+
   const isBase64Pdf = (value: any): boolean => {
     return typeof value === "string" && value.startsWith("data:application/pdf;base64,");
   };
@@ -48,10 +100,131 @@ export default function ProfilePage() {
   };
 
   const formatFieldName = (name: string) => {
-    const cleanName = name.split(":")[0];
-    return cleanName
+    const cleanName = name.split(":")[0].toLowerCase();
+    if (cleanName.includes("nascimento") || cleanName.includes("nasc")) {
+      return "DATA DE NASCIMENTO";
+    }
+    if (cleanName.includes("endereco") || cleanName.includes("endereço") || cleanName.includes("rua") || cleanName.includes("address")) {
+      return "ENDEREÇO";
+    }
+    if (cleanName.includes("telefone") || cleanName.includes("celular") || cleanName.includes("phone") || cleanName.includes("contato")) {
+      return "TELEFONE";
+    }
+    return name.split(":")[0]
       .replace(/_/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const getCollaboratorPt2Fields = (formData: Record<string, any> | null) => {
+    if (!formData) return [];
+
+    const fields: { label: string; value: string }[] = [];
+
+    Object.entries(formData).forEach(([key, value]) => {
+      if (typeof value !== "string") return;
+      if (value.startsWith("data:")) return;
+
+      const namePart = key.split(":")[0];
+      const normalizedName = namePart.toLowerCase();
+
+      const isAddress =
+        normalizedName.includes("endereco") ||
+        normalizedName.includes("endereço") ||
+        normalizedName.includes("rua") ||
+        normalizedName.includes("address");
+      const isBirthdate =
+        normalizedName.includes("nascimento") ||
+        normalizedName.includes("nasc") ||
+        normalizedName.includes("data de nascimento") ||
+        normalizedName.includes("data nascimento");
+      const isPhone =
+        normalizedName.includes("telefone") ||
+        normalizedName.includes("celular") ||
+        normalizedName.includes("phone") ||
+        normalizedName.includes("contato");
+
+      if (isAddress) {
+        fields.push({ label: "ENDEREÇO", value });
+      } else if (isBirthdate) {
+        fields.push({ label: "DATA DE NASCIMENTO", value: formatDate(value) });
+      } else if (isPhone) {
+        fields.push({ label: "TELEFONE", value: formatPhone(value) });
+      }
+    });
+
+    return fields;
+  };
+
+  const getStatusConfig = (statusKey: string | undefined) => {
+    switch (statusKey) {
+      case "ACTIVE":
+        return {
+          text: "Ativo",
+          className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        };
+      case "INACTIVE":
+        return {
+          text: "Inativo",
+          className: "bg-stone-100 text-stone-600 border-stone-200",
+        };
+      case "VACATION":
+        return {
+          text: "Férias",
+          className: "bg-blue-100 text-blue-700 border-blue-200",
+        };
+      case "SUSPENDED":
+        return {
+          text: "Suspenso",
+          className: "bg-amber-100 text-amber-700 border-amber-200",
+        };
+      default:
+        return {
+          text: "Ativo",
+          className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        };
+    }
+  };
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    setShowLeftGradient(scrollLeft > 5);
+    setShowRightGradient(scrollLeft < scrollWidth - clientWidth - 5);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleScroll();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [user]);
+
+  useEffect(() => {
+    window.addEventListener("resize", handleScroll);
+    return () => window.removeEventListener("resize", handleScroll);
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    setIsDragging(true);
+    setStartX(e.clientX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.clientX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    scrollRef.current.scrollLeft = scrollLeft - walk;
   };
 
   useEffect(() => {
@@ -80,11 +253,120 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
+  const fetchVacations = async () => {
+    try {
+      setLoadingVacations(true);
+      const res = await fetch("/api/ferias");
+      const result = await res.json();
+      if (result.success) {
+        setVacations(result.data);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar férias do perfil:", error);
+    } finally {
+      setLoadingVacations(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVacations();
+  }, []);
+
+  const handleRequestVacation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReqError("");
+    setReqSuccess("");
+
+    if (!reqStartDate || !reqEndDate) {
+      setReqError("Por favor, preencha as datas de início e fim.");
+      return;
+    }
+
+    const start = new Date(reqStartDate);
+    const end = new Date(reqEndDate);
+
+    if (end < start) {
+      setReqError("A data de término deve ser posterior à data de início.");
+      return;
+    }
+
+    setReqSubmitting(true);
+
+    try {
+      const res = await fetch("/api/ferias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: reqStartDate,
+          endDate: reqEndDate,
+          comment: reqComment.trim() || null,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Erro ao solicitar férias");
+      }
+
+      setReqSuccess("Solicitação de férias enviada com sucesso!");
+      setReqStartDate("");
+      setReqEndDate("");
+      setReqComment("");
+
+      await fetchVacations();
+
+      setTimeout(() => {
+        setIsRequestingVacation(false);
+        setReqSuccess("");
+      }, 1500);
+    } catch (error: any) {
+      console.error(error);
+      setReqError(error.message || "Erro ao enviar solicitação.");
+    } finally {
+      setReqSubmitting(false);
+    }
+  };
+
+  const handleCancelVacationRequest = async (vacationId: string) => {
+    if (!window.confirm("Tem certeza de que deseja cancelar esta solicitação de férias?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/ferias/${vacationId}`, {
+        method: "DELETE",
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Erro ao cancelar solicitação");
+      }
+
+      await fetchVacations();
+    } catch (error: any) {
+      console.error(error);
+      alert(error.message || "Erro ao cancelar solicitação.");
+    }
+  };
+
+  const formatDateString = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    return utcDate.toLocaleDateString("pt-BR");
+  };
+
+  const calculateDays = (startStr: string, endStr: string) => {
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  };
+
   async function handleRedirectToLogin() {
     setRedirecting(true);
     try {
-      // Limpa o cookie inválido que está causando o erro antes de redirecionar.
-      // Isso impede que o middleware intercepte o /login e jogue o usuário de volta para a Home.
       await fetch("/api/auth/logout", { method: "POST" });
     } catch (e) {
       console.error("Erro ao limpar cookie no redirecionamento:", e);
@@ -103,7 +385,6 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Redireciona para o login de forma limpa, reiniciando o estado do app
         window.location.href = "/login";
       } else {
         alert(data.message || "Erro ao fazer logout.");
@@ -118,7 +399,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <section className="p-5 flex flex-col items-center gap-5 w-full max-w-[1000px] mx-auto min-h-[80vh] justify-center">
+      <section className="p-5 flex flex-col items-center gap-5 w-full max-w-[1400px] mx-auto min-h-[80vh] justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
           <p className="text-stone-500 font-semibold text-sm animate-pulse">
@@ -131,14 +412,14 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <section className="p-5 flex flex-col items-center gap-5 w-full max-w-[1000px] mx-auto min-h-[80vh] justify-center">
+      <section className="p-5 flex flex-col items-center gap-5 w-full max-w-[1400px] mx-auto min-h-[80vh] justify-center">
         <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center gap-4 text-center max-w-md border border-stone-100 animate-fade-in">
           <AlertTriangle className="h-16 w-16 text-amber-500" />
           <h2 className="text-xl font-bold text-stone-800">
             Não foi possível carregar o perfil
           </h2>
           <p className="text-sm text-stone-500 leading-relaxed">
-            Houve um problema ao recuperar os dados da sua sessão. Por favor,
+            Houve um problemao ao recuperar os dados da sua sessão. Por favor,
             tente fazer login novamente.
           </p>
           {errorMessage && (
@@ -165,7 +446,6 @@ export default function ProfilePage() {
     );
   }
 
-  // Gera as iniciais do nome para o avatar
   const initials = user.name
     ? user.name
         .split(" ")
@@ -175,287 +455,657 @@ export default function ProfilePage() {
         .join("")
     : "U";
 
+  // Cálculos de aniversário e admissão
+  const getBirthdateValue = (formData: Record<string, any> | null): string | null => {
+    if (!formData) return null;
+
+    const birthdateEntry = Object.entries(formData).find(([key, value]) => {
+      if (typeof value !== "string") return false;
+      const namePart = key.split(":")[0].toLowerCase();
+      return (
+        namePart.includes("nascimento") ||
+        namePart.includes("nasc") ||
+        namePart.includes("data de nascimento") ||
+        namePart.includes("data nascimento")
+      );
+    });
+
+    return birthdateEntry ? formatDate(birthdateEntry[1]) : null;
+  };
+
+  const dataNascimento = (() => {
+    const value = getBirthdateValue(user.admissionData || null);
+
+    if (!value) return null;
+
+    const [dia, mes] = value.split("/");
+    let mesPorExtenso: string = "";
+    const meses = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ];
+
+    const mesesPorNumero = [
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+    ];
+
+    for (let i = 0; i < meses.length; i++) {
+      if (mes === mesesPorNumero[i]) {
+        mesPorExtenso = meses[i];
+        break;
+      }
+    }
+
+    return {
+      format: `${dia}/${mes}`,
+      value: value,
+      formExtenso: `${dia} de ${mesPorExtenso}`,
+    };
+  })();
+
+  function parseBRDate(date: string): Date {
+    const [day, month, year] = date.split("/");
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  function daysUntilNextBirthday(birthDateString: string): number {
+    const today = new Date();
+    const birthDate = parseBRDate(birthDateString);
+
+    let nextBirthday = new Date(
+      today.getFullYear(),
+      birthDate.getMonth(),
+      birthDate.getDate(),
+    );
+
+    if (nextBirthday < today) {
+      nextBirthday = new Date(
+        today.getFullYear() + 1,
+        birthDate.getMonth(),
+        birthDate.getDate(),
+      );
+    }
+
+    const diffMs = nextBirthday.getTime() - today.getTime();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  }
+
+  const getAdmissionInfo = () => {
+    let admissionStr = "";
+
+    if (user.admissionData) {
+      const admissionEntry = Object.entries(user.admissionData).find(
+        ([key, value]) => {
+          if (typeof value !== "string") return false;
+          const namePart = key.split(":")[0].toLowerCase();
+          return (
+            namePart.includes("admissao") ||
+            namePart.includes("admissão") ||
+            namePart.includes("admission") ||
+            namePart.includes("data de admissão") ||
+            namePart.includes("data admissao")
+          );
+        },
+      );
+      if (admissionEntry) {
+        admissionStr = admissionEntry[1];
+      }
+    }
+
+    let tempDate: Date;
+    let formattedDate: string;
+
+    if (admissionStr) {
+      if (admissionStr.includes("/")) {
+        const parts = admissionStr.split("/");
+        if (parts.length === 3) {
+          tempDate = new Date(
+            Number(parts[2]),
+            Number(parts[1]) - 1,
+            Number(parts[0]),
+          );
+        } else {
+          tempDate = new Date(user.createdAt);
+        }
+      } else {
+        tempDate = new Date(admissionStr);
+        if (isNaN(tempDate.getTime())) {
+          tempDate = new Date(user.createdAt);
+        }
+      }
+    } else {
+      tempDate = new Date(user.createdAt);
+    }
+
+    const d = String(tempDate.getDate()).padStart(2, "0");
+    const m = String(tempDate.getMonth() + 1).padStart(2, "0");
+    const y = tempDate.getFullYear();
+    formattedDate = `${d}/${m}/${y}`;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    tempDate.setHours(0, 0, 0, 0);
+
+    const diffMs = today.getTime() - tempDate.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    const companyDays = diffDays >= 0 ? diffDays : 0;
+
+    return {
+      formattedDate,
+      companyDays,
+    };
+  };
+
+  const admissionInfo = getAdmissionInfo();
+
+  const handlePreviewFile = (key: string, fileData: string) => {
+    if (!fileData) return;
+    if (isBase64Pdf(fileData)) {
+      setActivePdfBase64(fileData);
+      setActivePdfName(key);
+    } else if (isBase64Image(fileData)) {
+      setActiveImageBase64(fileData);
+      setActiveImageName(key);
+    } else {
+      try {
+        const newWindow = window.open();
+        if (newWindow) {
+          newWindow.document.title = "Pré-visualização do Arquivo";
+          newWindow.document.write(
+            `<body style="margin:0; background: #262626; display: flex; align-items: center; justify-content: center;">
+              <embed src="${fileData}" width="100%" height="100%" />
+            </body>`,
+          );
+          newWindow.document.close();
+        }
+      } catch (e) {
+        console.error(e);
+        const link = document.createElement("a");
+        link.href = fileData;
+        link.target = "_blank";
+        link.click();
+      }
+    }
+  };
+
+  const trilhaNavegação = [
+    { label: "Meu Perfil", href: "/perfil" },
+  ];
+
   return (
-    <section className="p-5 flex flex-col items-center gap-6 w-full mx-auto animate-fade-in">
-      {/* Cabeçalho */}
-      <div className="w-full flex justify-between items-center mb-2">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-700/70">
-            Meu Perfil
-          </h1>
-          <p className="text-stone-600/70 mt-1">
-            Gerencie suas informações pessoais e configurações de conta.
-          </p>
-        </div>
+    <SectionComponent>
+      <TittleHeader tittle="Meu Perfil" className="w-full" />
+      <div className="w-full">
+        <Breadcrumb items={trilhaNavegação} />
       </div>
 
       {/* Card Principal */}
-      <div className="w-full bg-white rounded-3xl shadow-xl border border-stone-100/50 overflow-hidden">
-        {/* Banner Decorativo */}
-        <div className="h-32 bg-gradient-to-r from-blue-500/50 to-indigo-600 relative shadow-lg">
-          {/* Badge do Papel do Usuário no Canto Superior Direito */}
-          <div className="absolute top-4 right-4">
-            <span
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold shadow-sm backdrop-blur-md border ${
-                user.role === "ADMIN"
-                  ? "bg-blue-500/20 text-white border-blue-400/30"
-                  : "bg-stone-500/20 text-white border-stone-400/30"
-              }`}
-            >
-              <Shield className="h-3.5 w-3.5" />
-              {user.role === "ADMIN" ? "Administrador (RH)" : "Colaborador"}
-            </span>
+      <div className="w-full p-8 bg-white rounded-3xl shadow-xl border border-stone-100/50 flex flex-col md:flex-row gap-8 items-center md:items-start animate-fade-in">
+        {/* SEÇÃO DA IMAGEM */}
+        <div className="flex items-center justify-center shrink-0 w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-stone-100 shadow-md overflow-hidden bg-stone-50">
+          {user.avatar ? (
+            <img
+              src={user.avatar}
+              alt={user.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-600 font-bold text-4xl">
+              {initials}
+            </div>
+          )}
+        </div>
+
+        {/* INFORMAÇÕES DO USUÁRIO */}
+        <div className="flex flex-col gap-4 pl-0 md:pl-4 pr-0 md:pr-8 py-2 border-r-0 md:border-r border-stone-500/10 min-w-0 w-full md:w-auto">
+          <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+            <h1 className="font-bold text-stone-800 tracking-wider text-xl sm:text-2xl break-words max-w-full">
+              {user.name}
+            </h1>
+            {(() => {
+              const currentStatus = getStatusConfig(user.status);
+              return (
+                <span
+                  className={`font-bold px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider border shrink-0 ${currentStatus.className}`}
+                >
+                  {currentStatus.text}
+                </span>
+              );
+            })()}
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <p className="text-sm">
+              <span className="font-bold text-stone-400 text-xs uppercase tracking-wider block mb-0.5">
+                Nível de Acesso:
+              </span>
+              {user.role === "ADMIN" ? (
+                <span className="inline-flex items-center text-xs font-bold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg border border-amber-200 mt-0.5">
+                  Administrador (RH)
+                </span>
+              ) : (
+                <span className="inline-flex items-center text-xs font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg border border-blue-100 mt-0.5">
+                  Colaborador
+                </span>
+              )}
+            </p>
+
+            <p className="text-sm">
+              <span className="font-bold text-stone-400 text-xs uppercase tracking-wider block mb-0.5">
+                Setor:
+              </span>
+              <span className="text-sm font-semibold text-stone-700 block mt-0.5">
+                {user.jobPosition?.department?.name || "Não atribuído"}
+              </span>
+            </p>
+
+            <p className="text-sm">
+              <span className="font-bold text-stone-400 text-xs uppercase tracking-wider block mb-0.5">
+                Cargo:
+              </span>
+              <span className="text-sm font-semibold text-stone-700 block mt-0.5">
+                {user.jobPosition?.name || "Não atribuído"}
+              </span>
+            </p>
+
+            <p className="text-sm">
+              <span className="font-bold text-stone-400 text-xs uppercase tracking-wider block mb-0.5">
+                Email:
+              </span>{" "}
+              <span className="font-medium text-stone-700">
+                {user.email}
+              </span>
+            </p>
+
+            <p className="text-sm">
+              <span className="font-bold text-stone-400 text-xs uppercase tracking-wider block mb-0.5">
+                CPF:
+              </span>{" "}
+              <span className="font-medium text-stone-700">
+                {formatCPF(user.cpf)}
+              </span>
+            </p>
           </div>
         </div>
 
-        {/* Informações do Usuário */}
-        <div className="px-8 pb-8 relative">
-          {/* Avatar sobreposto ao banner */}
-          <div className="absolute -top-16 left-8">
-            <div className="h-32 w-32 rounded-3xl bg-white p-2.5 shadow-lg border border-stone-100 flex items-center justify-center">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={`Avatar de ${user.name}`}
-                  className="h-full w-full rounded-2xl object-cover border border-stone-100"
-                />
-              ) : (
-                <div className="h-full w-full rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center text-blue-600 border border-blue-100/50">
-                  <span className="text-4xl font-bold tracking-wider">
-                    {initials}
-                  </span>
-                </div>
+        {/* INFORMAÇÕES DO USUÁRIO PT2 */}
+        <div className="flex flex-col pl-0 md:pl-8 py-2 flex-1 w-full border-r-0 md:border-r border-stone-500/10 pr-0 md:pr-8">
+          <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4">
+            Dados Adicionais
+          </h3>
+          {user.admissionData &&
+          getCollaboratorPt2Fields(user.admissionData).length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {getCollaboratorPt2Fields(user.admissionData).map(
+                (field, idx) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col gap-1 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm"
+                  >
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                      {field.label}
+                    </span>
+                    <span className="text-sm font-semibold text-stone-700 leading-relaxed">
+                      {field.value}
+                    </span>
+                  </div>
+                ),
               )}
             </div>
-          </div>
-
-          {/* Nome e Email de destaque */}
-          <div className="pt-20 pl-2 flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-stone-800">{user.name}</h2>
-              <p className="text-sm text-stone-500">{user.email}</p>
-            </div>
-            <div className="flex pt-2 pr-2">
-              <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="flex gap-2 p-3 border border-black/10 hover:bg-stone-400/20 cursor-pointer rounded-2xl justify-center items-center"
-              >
-                {loggingOut ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Saindo...
-                  </>
-                ) : (
-                  <>
-                    <LogOut className="h-5 w-5  transition-transform group-hover:translate-x-0.5 duration-200" />
-                    <span className="text-sm">Sair da Conta</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          <hr className="my-8 border-stone-100" />
-
-          {/* Grid de Detalhes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-2">
-            {/* Campo: Nome Completo */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-stone-50/50 border border-stone-100/60 hover:bg-stone-55 transition-colors">
-              <div className="p-3 bg-blue-50 text-blue-500 rounded-xl">
-                <User className="h-5 w-5" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
-                  Nome Completo
-                </span>
-                <span className="text-sm font-semibold text-stone-700 truncate">
-                  {user.name}
-                </span>
-              </div>
-            </div>
-
-            {/* Campo: E-mail */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-stone-50/50 border border-stone-100/60 hover:bg-stone-55 transition-colors">
-              <div className="p-3 bg-indigo-50 text-indigo-500 rounded-xl">
-                <Mail className="h-5 w-5" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
-                  E-mail
-                </span>
-                <span className="text-sm font-semibold text-stone-700 truncate">
-                  {user.email}
-                </span>
-              </div>
-            </div>
-
-            {/* Campo: CPF */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-stone-50/50 border border-stone-100/60 hover:bg-stone-55 transition-colors">
-              <div className="p-3 bg-emerald-50 text-emerald-500 rounded-xl">
-                <Fingerprint className="h-5 w-5" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
-                  CPF
-                </span>
-                <span className="text-sm font-semibold text-stone-700 truncate">
-                  {formatCPF(user.cpf)}
-                </span>
-              </div>
-            </div>
-
-            {/* Campo: Nível de Acesso */}
-            <div className="flex items-center gap-4 p-4 rounded-2xl bg-stone-50/50 border border-stone-100/60 hover:bg-stone-55 transition-colors">
-              <div className="p-3 bg-amber-50 text-amber-500 rounded-xl">
-                <Shield className="h-5 w-5" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider">
-                  Nível de Acesso
-                </span>
-                <span className="text-sm font-semibold text-stone-700 truncate">
-                  {user.role === "ADMIN" ? "Administrador (RH)" : "Colaborador"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {user.admissionData && Object.keys(user.admissionData).length > 0 && (
-            <>
-              <hr className="my-8 border-stone-100" />
-              
-              {/* Seção: Meus Dados Admissionais */}
-              <div className="pl-2 pr-2">
-                <h3 className="text-md font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2 mb-6">
-                  <FileText className="text-blue-500" size={20} />
-                  Meus Dados Admissionais
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {Object.entries(user.admissionData).map(([key, value]) => {
-                    const isPdf = isBase64Pdf(value);
-                    const isImage = isBase64Image(value);
-                    const fieldName = key.split(":")[0];
-
-                    if (isPdf) {
-                      return (
-                        <div key={key} className="flex flex-col justify-between gap-4 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[120px]">
-                          <div className="flex flex-col gap-1 min-w-0">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                              {formatFieldName(key)}
-                            </span>
-                            <span className="text-xs text-stone-500 italic mt-0.5 flex items-center gap-1.5">
-                              <FileText size={12} className="text-red-500 shrink-0" />
-                              Documento PDF enviado
-                            </span>
-                          </div>
-                          <div className="flex gap-2 items-center mt-auto">
-                            {/* Olhinho Icon Button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActivePdfBase64(value);
-                                setActivePdfName(key);
-                              }}
-                              className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
-                              title="Visualizar PDF"
-                            >
-                              <Eye size={16} />
-                            </button>
-
-                            {/* Instalar / Download Button */}
-                            <a
-                              href={value}
-                              download={`${fieldName}.pdf`}
-                              className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
-                              title="Instalar / Baixar PDF"
-                            >
-                              <Download size={16} />
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    if (isImage) {
-                      return (
-                        <div key={key} className="flex flex-col justify-between gap-4 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[150px]">
-                          <div className="flex flex-col gap-3 min-w-0">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                              {formatFieldName(key)}
-                            </span>
-                            <div className="relative group w-fit max-w-full">
-                              <img 
-                                src={value} 
-                                alt={formatFieldName(key)} 
-                                className="max-h-40 rounded-xl object-contain border border-stone-200 shadow-sm transition-all duration-200 hover:scale-[1.02] bg-stone-100 cursor-pointer"
-                                onClick={() => {
-                                  setActiveImageBase64(value);
-                                  setActiveImageName(key);
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div className="flex gap-2 items-center mt-auto">
-                            {/* Olhinho Icon Button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveImageBase64(value);
-                                setActiveImageName(key);
-                              }}
-                              className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
-                              title="Visualizar Foto"
-                            >
-                              <Eye size={16} />
-                            </button>
-
-                            {/* Instalar / Download Button */}
-                            <a
-                              href={value}
-                              download={`${fieldName}.png`}
-                              className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
-                              title="Instalar / Baixar Foto"
-                            >
-                              <Download size={16} />
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    let displayValue = value;
-                    const normalizedFieldName = fieldName.toLowerCase();
-                    if (normalizedFieldName === "cpf") {
-                      displayValue = formatCPF(value);
-                    } else if (
-                      normalizedFieldName.includes("telefone") ||
-                      normalizedFieldName.includes("celular") ||
-                      normalizedFieldName.includes("phone")
-                    ) {
-                      displayValue = formatPhone(value);
-                    }
-
-                    return (
-                      <div key={key} className="flex flex-col gap-1 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[100px]">
-                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                          {formatFieldName(key)}
-                        </span>
-                        <span className="text-sm font-semibold text-stone-700 mt-1 leading-relaxed break-words">
-                          {displayValue || <span className="italic text-stone-400 font-normal">Não informado</span>}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
+          ) : (
+            <p className="text-stone-400 italic text-sm">
+              Nenhum dado de endereço, data de nascimento ou telefone
+              respondido.
+            </p>
           )}
+        </div>
 
-          <hr className="my-8 border-stone-100" />
+        {/* Sair da Conta */}
+        <div className="flex shrink-0 w-full md:w-auto">
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="bg-stone-50/50 p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm text-sm flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer hover:scale-[1.02] disabled:opacity-50 w-full md:w-auto"
+          >
+            {loggingOut ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saindo...
+              </>
+            ) : (
+              <>
+                <LogOut className="h-4 w-4 text-stone-850" />
+                Sair da Conta
+              </>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Seção: Meus Documentos Admissionais */}
+      {user.admissionData &&
+        Object.entries(user.admissionData).filter(
+          ([key, value]) => isBase64Pdf(value) || isBase64Image(value)
+        ).length > 0 && (
+          <div className="w-full bg-white rounded-3xl shadow-xl border border-stone-100/50 p-8 mt-4 animate-fade-in">
+            <h3 className="text-md font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2 mb-6 border-b border-stone-100 pb-3">
+              <FileText className="text-blue-500" size={20} />
+              Meus Documentos Admissionais
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {Object.entries(user.admissionData)
+                .filter(([key, value]) => isBase64Pdf(value) || isBase64Image(value))
+                .map(([key, value]) => {
+                  const isPdf = isBase64Pdf(value);
+                  const isImage = isBase64Image(value);
+                  const fieldName = key.split(":")[0];
+
+                  if (isPdf) {
+                    return (
+                      <div
+                        key={key}
+                        className="flex flex-col justify-between gap-4 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[120px]"
+                      >
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                            {formatFieldName(key)}
+                          </span>
+                          <span className="text-xs text-stone-500 italic mt-0.5 flex items-center gap-1.5">
+                            <FileText size={12} className="text-red-500 shrink-0" />
+                            Documento PDF enviado
+                          </span>
+                        </div>
+                        <div className="flex gap-2 items-center mt-auto">
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewFile(key, value)}
+                            className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                            title="Visualizar PDF"
+                          >
+                            <Eye size={16} />
+                          </button>
+
+                          <a
+                            href={value}
+                            download={`${fieldName}.pdf`}
+                            className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                            title="Instalar / Baixar PDF"
+                          >
+                            <Download size={16} />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (isImage) {
+                    return (
+                      <div
+                        key={key}
+                        className="flex flex-col justify-between gap-4 bg-stone-50/50 p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[150px]"
+                      >
+                        <div className="flex flex-col gap-3 min-w-0">
+                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                            {formatFieldName(key)}
+                          </span>
+                          <div className="relative group w-fit max-w-full">
+                            <img
+                              src={value}
+                              alt={formatFieldName(key)}
+                              className="max-h-40 rounded-xl object-contain border border-stone-200 shadow-sm transition-all duration-200 hover:scale-[1.02] bg-stone-100 cursor-pointer"
+                              onClick={() => handlePreviewFile(key, value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 items-center mt-auto">
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewFile(key, value)}
+                            className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                            title="Visualizar Foto"
+                          >
+                            <Eye size={16} />
+                          </button>
+
+                          <a
+                            href={value}
+                            download={`${fieldName}.png`}
+                            className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                            title="Instalar / Baixar Foto"
+                          >
+                            <Download size={16} />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })}
+            </div>
+          </div>
+        )}
+
+      {/* Seção: Minhas Férias */}
+      <div className="w-full bg-white rounded-3xl shadow-xl border border-stone-100/50 p-8 mt-4 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-stone-100 pb-3">
+          <h3 className="text-md font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2">
+            <Palmtree className="text-blue-500" size={20} />
+            Minhas Férias
+          </h3>
+          <button
+            onClick={() => setIsRequestingVacation(true)}
+            className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer w-full sm:w-auto"
+          >
+            <Plus size={16} />
+            Solicitar Férias
+          </button>
+        </div>
+
+        {loadingVacations ? (
+          <div className="py-6 flex flex-col items-center justify-center text-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+            <p className="text-stone-400 text-xs">Carregando dados de férias...</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {vacations.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {vacations.map((v) => {
+                  const totalDays = calculateDays(v.startDate, v.endDate);
+                  const isPending = v.status === "PENDING";
+                  const isApproved = v.status === "APPROVED";
+                  const isRejected = v.status === "REJECTED";
+
+                  let statusBg = "bg-amber-50 text-amber-700 border-amber-100";
+                  let statusText = "Pendente";
+                  if (isApproved) {
+                    statusBg = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                    statusText = "Aprovado";
+                  } else if (isRejected) {
+                    statusBg = "bg-rose-50 text-rose-700 border-rose-100";
+                    statusText = "Recusado";
+                  }
+
+                  return (
+                    <div
+                      key={v.id}
+                      className="flex flex-col justify-between gap-4 bg-stone-50/50 p-5 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[150px]"
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className={`font-bold px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider border ${statusBg}`}>
+                            {statusText}
+                          </span>
+                          {isPending && (
+                            <button
+                              onClick={() => handleCancelVacationRequest(v.id)}
+                              className="text-stone-450 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                              title="Cancelar solicitação"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-start gap-2.5">
+                          <Calendar className="text-blue-500 shrink-0 mt-0.5" size={16} />
+                          <div>
+                            <p className="text-sm font-bold text-stone-700">
+                              {formatDateString(v.startDate)} - {formatDateString(v.endDate)}
+                            </p>
+                            <p className="text-xs font-semibold text-stone-500 mt-0.5">
+                              {totalDays} dias de duração
+                            </p>
+                          </div>
+                        </div>
+
+                        {v.comment && (
+                          <div className="text-xs text-stone-500 italic flex gap-1 items-start bg-white/60 p-2 rounded-lg border border-stone-100">
+                            <MessageSquare size={12} className="text-stone-400 shrink-0 mt-0.5" />
+                            <span className="line-clamp-2">{v.comment}</span>
+                          </div>
+                        )}
+                        
+                        {isRejected && v.comment && (
+                          <p className="text-[11px] text-rose-600 font-medium">
+                            * {v.comment}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-8 flex flex-col items-center justify-center text-center gap-2 bg-stone-50/30 rounded-2xl border border-stone-100">
+                <Palmtree size={32} className="text-stone-300" />
+                <p className="text-stone-500 font-semibold text-xs">Nenhuma solicitação de férias registrada</p>
+                <p className="text-stone-400 text-[11px] max-w-xs">Precisa descansar? Solicite suas férias clicando no botão acima.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modal para Solicitar Férias */}
+      {isRequestingVacation && (
+        <Modal
+          isOpen={isRequestingVacation}
+          onClose={() => {
+            setIsRequestingVacation(false);
+            setReqStartDate("");
+            setReqEndDate("");
+            setReqComment("");
+            setReqError("");
+            setReqSuccess("");
+          }}
+          title="Solicitar Nova Férias"
+          maxWidth="max-w-md"
+        >
+          <form onSubmit={handleRequestVacation} className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                  Data de Início
+                </label>
+                <InputField
+                  type="date"
+                  value={reqStartDate}
+                  onChange={(e) => setReqStartDate(e.target.value)}
+                  disabled={reqSubmitting}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                  Data de Término
+                </label>
+                <InputField
+                  type="date"
+                  value={reqEndDate}
+                  onChange={(e) => setReqEndDate(e.target.value)}
+                  disabled={reqSubmitting}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-stone-500 uppercase tracking-wider">
+                Motivo / Justificativa (Opcional)
+              </label>
+              <textarea
+                value={reqComment}
+                onChange={(e) => setReqComment(e.target.value)}
+                disabled={reqSubmitting}
+                placeholder="Ex: Gostaria de usufruir de 15 dias de férias..."
+                className="w-full min-h-[80px] p-3 rounded-xl border border-stone-350 text-sm focus:outline-none focus:ring-1 focus:ring-blue-550 focus:border-blue-500 resize-none bg-white text-stone-700"
+              />
+            </div>
+
+            {reqError && (
+              <div className="text-xs text-red-500 flex items-center gap-1.5 mt-1 bg-red-50 p-2.5 rounded-xl border border-red-100">
+                <AlertCircle size={14} className="shrink-0" />
+                <span>{reqError}</span>
+              </div>
+            )}
+
+            {reqSuccess && (
+              <div className="text-xs text-emerald-600 flex items-center gap-1.5 mt-1 font-semibold bg-emerald-50 p-2.5 rounded-xl border border-emerald-100">
+                <CheckCircle2 size={14} className="shrink-0" />
+                <span>{reqSuccess}</span>
+              </div>
+            )}
+
+            <div className="flex justify-center gap-3 border-t border-stone-100 pt-4 mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRequestingVacation(false);
+                  setReqStartDate("");
+                  setReqEndDate("");
+                  setReqComment("");
+                  setReqError("");
+                  setReqSuccess("");
+                }}
+                disabled={reqSubmitting}
+                className="px-4 py-2.5 rounded-xl border border-stone-400/50 text-stone-600 hover:bg-stone-50 transition-colors text-xs font-semibold cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <SubmitButton
+                text={reqSubmitting ? "Enviando..." : "Confirmar"}
+                disabled={reqSubmitting}
+                className="!w-auto !py-2.5 !px-6 rounded-xl font-bold text-xs shadow-sm cursor-pointer"
+              />
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Lightbox / Modal de Pré-visualização do PDF */}
       {activePdfBase64 && (
@@ -481,7 +1131,7 @@ export default function ProfilePage() {
                   setActivePdfBase64(null);
                   setActivePdfName("");
                 }}
-                className="text-stone-400 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-all duration-200"
+                className="text-stone-400 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-all duration-200 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -523,7 +1173,7 @@ export default function ProfilePage() {
                   setActiveImageBase64(null);
                   setActiveImageName("");
                 }}
-                className="text-stone-400 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-all duration-200"
+                className="text-stone-400 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full transition-all duration-200 cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -540,6 +1190,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-    </section>
+    </SectionComponent>
   );
 }

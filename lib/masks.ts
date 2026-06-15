@@ -48,3 +48,19 @@ export function formatPhone(value: string): string {
   }
   return `(${limitedValue.slice(0, 2)}) ${limitedValue.slice(2, 7)}-${limitedValue.slice(7, 11)}`;
 }
+
+/**
+ * Aplica a máscara de data brasileira: DD/MM/AAAA
+ */
+export function formatDate(value: string): string {
+  if (!value) return "";
+  const cleanValue = cleanDigits(value);
+  const limitedValue = cleanValue.slice(0, 8);
+
+  if (limitedValue.length <= 2) return limitedValue;
+  if (limitedValue.length <= 4) {
+    return `${limitedValue.slice(0, 2)}/${limitedValue.slice(2)}`;
+  }
+  return `${limitedValue.slice(0, 2)}/${limitedValue.slice(2, 4)}/${limitedValue.slice(4, 8)}`;
+}
+

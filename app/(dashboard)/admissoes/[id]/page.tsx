@@ -20,7 +20,7 @@ import {
   Trash2
 } from "lucide-react";
 import Link from "next/link";
-import { formatCPF, formatPhone } from "@/lib/masks";
+import { formatCPF, formatPhone, formatDate } from "@/lib/masks";
 
 interface AdmissionDetails {
   id: string;
@@ -114,8 +114,17 @@ export default function ReviewAdmissionPage() {
   };
 
   const formatFieldName = (name: string) => {
-    const cleanName = name.split(":")[0];
-    return cleanName
+    const cleanName = name.split(":")[0].toLowerCase();
+    if (cleanName.includes("nascimento") || cleanName.includes("nasc")) {
+      return "DATA DE NASCIMENTO";
+    }
+    if (cleanName.includes("endereco") || cleanName.includes("endereço") || cleanName.includes("rua") || cleanName.includes("address")) {
+      return "ENDEREÇO";
+    }
+    if (cleanName.includes("telefone") || cleanName.includes("celular") || cleanName.includes("phone") || cleanName.includes("contato")) {
+      return "TELEFONE";
+    }
+    return name.split(":")[0]
       .replace(/_/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase());
   };
@@ -166,7 +175,7 @@ export default function ReviewAdmissionPage() {
       <div>
         <Link
           href="/admissao"
-          className="inline-flex w-full items-center gap-2 text-stone-500 hover:text-stone-700 font-semibold text-sm bg-white border border-stone-200/60 px-4 py-2 rounded-xl shadow-sm hover:shadow transition-all"
+          className="inline-flex w-fit items-center gap-2 text-stone-500 hover:text-stone-700 font-semibold text-sm bg-white border border-stone-200/60 px-4 py-2 rounded-xl shadow-sm hover:shadow transition-all"
         >
           <ArrowLeft size={16} /> Voltar
         </Link>
@@ -412,6 +421,11 @@ export default function ReviewAdmissionPage() {
                   normalizedFieldName.includes("phone")
                 ) {
                   displayValue = formatPhone(value);
+                } else if (
+                  normalizedFieldName.includes("nascimento") ||
+                  normalizedFieldName.includes("nasc")
+                ) {
+                  displayValue = formatDate(value);
                 }
 
                 return (

@@ -82,7 +82,7 @@ export default function AdmissaoPage() {
         return "Hoje";
       }
 
-      // Formata em "15 Mai" ou similar
+      
       const day = date.getDate();
       const monthNames = [
         "Jan",
@@ -122,7 +122,7 @@ export default function AdmissaoPage() {
   return (
     <section className="p-5 flex flex-col items-center gap-5 w-full max-w-[1400px] mx-auto animate-fade-in">
       {/* Cabeçalho */}
-      <div className="w-full flex justify-between items-center mb-2">
+      <div className="w-full flex flex-col md:flex-row justify-between md:items-center gap-4 mb-2">
         <div>
           <h1 className="text-2xl font-semibold text-stone-700/70">Admissão</h1>
           <p className="text-stone-600/70 mt-1">
@@ -134,7 +134,7 @@ export default function AdmissaoPage() {
         {/* Botão de Nova Admissão */}
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-[#3B82F6] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md transition-all active:scale-95 cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-[#3B82F6] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md transition-all active:scale-95 cursor-pointer w-full md:w-auto"
         >
           <Plus className="h-5 w-5" strokeWidth={2.5} />
           Nova Admissão
@@ -142,7 +142,7 @@ export default function AdmissaoPage() {
       </div>
 
       {/* Cards Superiores */}
-      <div className="w-full flex gap-14 justify-between">
+      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-14">
         {/* Card 1: Enviados (Azul) */}
         <div className="flex bg-white h-[140px] w-full rounded-2xl shadow-xl border-r-[10px] border-[#3B82F6] transition-transform hover:-translate-y-1 duration-300">
           <div className="w-[30%] flex justify-center items-center">
@@ -214,12 +214,12 @@ export default function AdmissaoPage() {
       </div>
 
       {/* Seção Inferior: Lista e Mini Card */}
-      <div className="w-full flex gap-14 mt-4">
+      <div className="w-full flex flex-col lg:flex-row gap-6 lg:gap-14 mt-4">
         {/* Lista de candidatos em análise da API */}
         <ReviewList candidates={candidates} />
 
         {/* LADO DIREITO: Mini Card de Últimas Admissões conectada à API */}
-        <div className="w-[420px] bg-white rounded-2xl shadow-xl p-6 border border-stone-100 flex flex-col">
+        <div className="w-full lg:w-[420px] bg-white rounded-2xl shadow-xl p-6 border border-stone-100 flex flex-col">
           <div className="border-b border-stone-100 pb-4 mb-4">
             <h2 className="text-lg font-bold text-stone-700">
               Últimas Aprovações

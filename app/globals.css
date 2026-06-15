@@ -3,3 +3,13 @@
 body {
   font-family: var(--font-poppins), sans-serif !important;
 }
+
+/* Ocultar barra de rolagem mantendo a funcionalidade de scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE e Edge */
+  scrollbar-width: none;  /* Firefox */
+}

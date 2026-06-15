@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle, UploadCloud, FileText, ShieldAlert } from "lucide-react";
-import { formatCPF, formatPhone } from "@/lib/masks";
+import { formatCPF, formatPhone, formatDate } from "@/lib/masks";
 
 export default function CandidateAdmissionPage() {
   const params = useParams();
@@ -77,6 +77,8 @@ export default function CandidateAdmissionPage() {
       normalizedName.includes("phone")
     ) {
       formattedValue = formatPhone(value);
+    } else if (normalizedName.includes("nascimento") || normalizedName.includes("nasc")) {
+      formattedValue = formatDate(value);
     }
 
     setFormData((prev) => ({ ...prev, [field]: formattedValue }));
@@ -241,10 +243,14 @@ export default function CandidateAdmissionPage() {
                 const { name, type } = parseField(field);
                 const isFile = type === "FILE";
 
+                const normalizedName = name.toLowerCase();
+
                 return (
                   <div key={field} className="flex flex-col gap-1.5">
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider ml-1">
-                      {name.replace(/_/g, " ")}{" "}
+                      {normalizedName.includes("nascimento")
+                        ? "DATA DE NASCIMENTO"
+                        : name.replace(/_/g, " ")}{" "}
                       <span className="text-red-500">*</span>
                     </label>
 
@@ -304,7 +310,24 @@ export default function CandidateAdmissionPage() {
                         value={formData[field] || ""}
                         onChange={(e) => handleInputChange(field, e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm text-gray-700"
-                        placeholder={`Digite seu ${name.replace(/_/g, " ")}`}
+                        placeholder={
+                          normalizedName.includes("nascimento")
+                            ? "DD/MM/AAAA"
+                            : normalizedName.includes("cpf")
+                            ? "000.000.000-00"
+                            : normalizedName.includes("telefone") || normalizedName.includes("celular") || normalizedName.includes("phone")
+                            ? "(00) 00000-0000"
+                            : `Digite seu ${name.replace(/_/g, " ")}`
+                        }
+                        maxLength={
+                          normalizedName.includes("nascimento")
+                            ? 10
+                            : normalizedName.includes("cpf")
+                            ? 14
+                            : normalizedName.includes("telefone") || normalizedName.includes("celular") || normalizedName.includes("phone")
+                            ? 15
+                            : undefined
+                        }
                       />
                     )}
                   </div>

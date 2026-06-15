@@ -21,21 +21,34 @@ enum AdmissionStatus {
   REJECTED // Recusado pelo RH
 }
 
+// Status do contrato de trabalhado do colaborador ativo
+enum EmployeeStatus {
+  ACTIVE // ativo 
+  INACTIVE // inativo 
+  SUSPENDED // suspenso
+  VACATION // de férias 
+}
+
 // 1. USUÁRIOS (Quem efetivamente faz login no sistema)
 model User {
-  id       String   @id @default(uuid())
-  email    String   @unique
-  name     String
-  cpf      String   @unique
-  password String? // Opcional no início, até que o usuário crie a senha no primeiro acesso
-  role     UserRole @default(USER)
-  avatar   String? // URL da foto do usuário
+  id            String         @id @default(uuid())
+  email         String         @unique
+  name          String
+  cpf           String         @unique
+  password      String? // Opcional no início, até que o usuário crie a senha no primeiro acesso
+  role          UserRole       @default(USER)
+  avatar        String? // URL da foto do usuário
+  status        EmployeeStatus @default(ACTIVE) // ativo, inativo, de férias, suspenso
+  jobPositionId String? // cargo atual do colaborador
+  jobPosition   JobPosition?   @relation(fields: [jobPositionId], references: [id], onDelete: SetNull)
 
   // Relacionamentos:
-  // Templates criados por este usuário (caso seja um Admin/RH)
-  templates  AdmissionTemplate[]
-  // Admissões que este usuário iniciou/gerenciou
-  admissions Admission[]
+  templates          AdmissionTemplate[]
+  admissions         Admission[]
+  vacations          Vacation[]          @relation("UserVacations")
+  approvedVacations  Vacation[]          @relation("ApprovedVacations")
+  workSchedules      WorkSchedule[]      @relation("UserWorkSchedules")
+  timeRecords        TimeRecord[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -45,19 +58,13 @@ model User {
 
 // 2. TEMPLATES DE ADMISSÃO (Os padrões que o RH salva para não repetir trabalho)
 model AdmissionTemplate {
-  id          String  @id @default(uuid())
-  name        String // Ex: "Padrão Desenvolvedor CLT", "Estágio Administrativo"
-  description String?
-
-  // Quais campos/documentos serão exigidos (ex: ["rg", "comprovante_residencia", "diploma"])
-  requiredFields Json
-
-  // Quem criou este padrão
-  createdById String
-  createdBy   User   @relation(fields: [createdById], references: [id])
-
-  // Histórico de admissões que usaram este padrão
-  admissions Admission[]
+  id             String      @id @default(uuid())
+  name           String // Ex: "Padrão Desenvolvedor CLT", "Estágio Administrativo"
+  description    String?
+  requiredFields Json // Quais campos/documentos serão exigidos (ex: ["rg", "comprovante_residencia", "diploma"])
+  createdById    String
+  createdBy      User        @relation(fields: [createdById], references: [id])
+  admissions     Admission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,28 +82,136 @@ model Admission {
   candidateAvatar   String? // URL da foto que o colaborador vai enviar, exibida na listagem
   status            AdmissionStatus @default(INVITED)
   justification     String? // Justificativa de correção ou cancelamento enviada pelo RH
+  candidateRole     UserRole        @default(USER)
 
-  // O NOVO CAMPO: O papel que este colaborador terá no sistema assim que for aprovado
-  candidateRole UserRole @default(USER)
+  jobPositionId String
+  jobPosition   JobPosition @relation(fields: [jobPositionId], references: [id])
 
-  // Configuração dos campos exigidos (copiado do template ou customizado no modal)
-  formConfig Json
-
-  // Dados e documentos que o candidato preencheu e enviou de volta
-  formData Json?
-
-  // Quem no RH iniciou esse processo de admissão
+  formConfig  Json // Configuração dos campos exigidos (copiado do template ou customizado no modal)
+  formData    Json? // Dados e documentos que o candidato preencheu e enviou de volta
   createdById String
-  createdBy   User   @relation(fields: [createdById], references: [id])
-
-  // Qual template de padrão foi utilizado (opcional)
-  templateId String?
-  template   AdmissionTemplate? @relation(fields: [templateId], references: [id])
+  createdBy   User               @relation(fields: [createdById], references: [id])
+  templateId  String?
+  template    AdmissionTemplate? @relation(fields: [templateId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Regra de segurança: impede duplicidade de processos ativos para o mesmo CPF ao mesmo tempo
   @@unique([candidateCpf, status])
+  @@index([status])
+  @@index([updatedAt])
+  @@index([status, updatedAt(sort: Desc)])
   @@map("admissions")
+}
+
+// 4. SETORES DA EMPRESA
+model Department {
+  id          String        @id @default(uuid())
+  name        String        @unique
+  description String?
+  positions   JobPosition[] // um setor possui vários cargos
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("departments")
+}
+
+// 5. CARGOS DA EMPRESA VINCULADOS AOS SETORES
+model JobPosition {
+  id           String      @id @default(uuid())
+  name         String
+  departmentId String
+  department   Department  @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  users        User[]
+  admissions   Admission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, departmentId])
+  @@map("job_positions")
+}
+
+// 6. FÉRIAS DOS COLABORADORES
+enum VacationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Vacation {
+  id           String         @id @default(uuid())
+  userId       String         @map("user_id")
+  user         User           @relation("UserVacations", fields: [userId], references: [id], onDelete: Cascade)
+  startDate    DateTime       @map("start_date")
+  endDate      DateTime       @map("end_date")
+  status       VacationStatus @default(PENDING)
+  approvedById String?        @map("approved_by_id")
+  approvedBy   User?          @relation("ApprovedVacations", fields: [approvedById], references: [id], onDelete: SetNull)
+  comment      String? // Opcional (motivo, observações, etc.)
+  
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@map("vacations")
+}
+
+// 7. ESCALA/CALENDÁRIO DE TRABALHO DO COLABORADOR
+model WorkSchedule {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation("UserWorkSchedules", fields: [userId], references: [id], onDelete: Cascade)
+  type         String    @default("FIXED") // "FIXED" ou "SPECIFIC"
+  startDate    DateTime? @map("start_date")
+  endDate      DateTime? @map("end_date")
+  description  String?
+  scheduleData Json      // Armazena a escala de dias e horas
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("work_schedules")
+}
+
+// 8. CATEGORIAS DE PAUSAS DO PONTO
+model PauseCategory {
+  id        String            @id @default(uuid())
+  name      String            @unique // Ex: "Almoço", "Lanche"
+  duration  Int               // Duração recomendada em minutos (ex: 60)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  pauses    TimeRecordPause[]
+
+  @@map("pause_categories")
+}
+
+// 9. REGISTROS DE PONTO (DIÁRIO)
+model TimeRecord {
+  id        String            @id @default(uuid())
+  userId    String            @map("user_id")
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime          // O dia do ponto (ex: 2026-06-14)
+  entryTime DateTime?         @map("entry_time") // Ponto de Entrada padrão
+  exitTime  DateTime?         @map("exit_time")  // Ponto de Saída padrão
+  pauses    TimeRecordPause[]
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  @@unique([userId, date])
+  @@map("time_records")
+}
+
+// 10. PAUSAS REALIZADAS NO PONTO
+model TimeRecordPause {
+  id              String        @id @default(uuid())
+  timeRecordId    String        @map("time_record_id")
+  timeRecord      TimeRecord    @relation(fields: [timeRecordId], references: [id], onDelete: Cascade)
+  pauseCategoryId String        @map("pause_category_id")
+  pauseCategory   PauseCategory @relation(fields: [pauseCategoryId], references: [id], onDelete: Restrict)
+  startTime       DateTime      @map("start_time")
+  endTime         DateTime?     @map("end_time")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@map("time_record_pauses")
 }

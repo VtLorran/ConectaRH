@@ -42,7 +42,11 @@ export default function AdmissionModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
-  const [role, setRole] = useState<"USER" | "ADMIN">("USER");
+
+  const [jobPositions, setJobPositions] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const [selectedJobPositionId, setSelectedJobPositionId] = useState("");
 
   // Configuração dos Campos Adicionais (Lado Direito)
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -92,13 +96,36 @@ export default function AdmissionModal({
     }
   };
 
+  const fetchJobPositions = async () => {
+    try {
+      const response = await fetch("/api/job-positions");
+      const result = await response.json();
+      if (result.success && result.data) {
+        setJobPositions(result.data);
+        const uniqueDepts: any[] = [];
+        const deptIds = new Set();
+        result.data.forEach((pos: any) => {
+          if (pos.department && !deptIds.has(pos.department.id)) {
+            deptIds.add(pos.department.id);
+            uniqueDepts.push(pos.department);
+          }
+        });
+        setDepartments(uniqueDepts);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar cargos:", err);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchTemplates();
+      fetchJobPositions();
       setName("");
       setEmail("");
       setCpf("");
-      setRole("USER");
+      setSelectedDepartmentId("");
+      setSelectedJobPositionId("");
       setFormFields(["foto:FILE"]);
       setSelectedTemplateId("");
       setTemplateEditName("");
@@ -287,6 +314,11 @@ export default function AdmissionModal({
       return;
     }
 
+    if (!selectedJobPositionId) {
+      setError("Por favor, selecione o setor e o cargo do colaborador.");
+      return;
+    }
+
     if (formFields.length === 0) {
       setError(
         "Por favor, selecione ou adicione pelo menos 1 campo/documento para o candidato preencher.",
@@ -341,9 +373,9 @@ export default function AdmissionModal({
           name: name.trim(),
           email: email.trim(),
           cpf: cleanCpf,
-          candidateRole: role,
+          jobPositionId: selectedJobPositionId,
           hrUserId: hrUserId,
-          formConfiguration: formFields, // passa os campos customizados/templates definidos (com tipos embutidos, Ex: "rg:FILE")
+          formConfiguration: formFields,
         }),
       });
 
@@ -383,7 +415,7 @@ export default function AdmissionModal({
       onClick={handleOverlayClick}
       className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
     >
-      <div className="bg-white w-full max-w-[900px] h-full max-h-[700px] rounded-3xl shadow-2xl overflow-hidden border border-stone-100 flex flex-col transform transition-all scale-100 relative">
+      <div className="bg-white w-full max-w-[900px] h-auto md:h-full md:max-h-[700px] max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden border border-stone-100 flex flex-col transform transition-all scale-100 relative">
         {/* Cabeçalho do Modal */}
         <div className="bg-[linear-gradient(to_right,#3B82F6,#1D4ED8)] p-6 text-white relative shrink-0">
           <button
@@ -402,9 +434,9 @@ export default function AdmissionModal({
 
         {/* Corpo do Modal - Duas Colunas */}
         <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
-          <div className="flex flex-col md:flex-row overflow-hidden max-h-[75vh] min-h-[500px]">
+          <div className="flex flex-col md:flex-row overflow-y-auto md:overflow-hidden md:max-h-[75vh] min-h-0 md:min-h-[500px] flex-1">
             {/* COLUNA ESQUERDA: Dados do Candidato */}
-            <div className="w-full md:w-[45%] p-6 flex flex-col gap-5 overflow-y-auto border-b md:border-b-0 md:border-r border-stone-100">
+            <div className="w-full md:w-[45%] p-6 flex flex-col gap-5 md:overflow-y-auto border-b md:border-b-0 md:border-r border-stone-100">
               <h3 className="text-sm font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2 border-b border-stone-50 pb-2">
                 <UserRound size={16} className="text-blue-500" />
                 1. Ficha de Contato
@@ -461,24 +493,29 @@ export default function AdmissionModal({
                 />
               </div>
 
-              {/* Input: Cargo */}
+              {/* Input: Setor */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-stone-600/80 uppercase tracking-wider ml-1">
-                  Perfil de Acesso
+                  Setor
                 </label>
                 <div className="flex w-full border border-stone-400/50 rounded-xl py-3 px-3 gap-2 items-center bg-transparent">
-                  <Briefcase size={18} className="text-stone-400 shrink-0" />
+                  <Tags size={18} className="text-stone-400 shrink-0" />
                   <select
                     required
                     disabled={loading || !!successMsg}
-                    value={role}
-                    onChange={(e) =>
-                      setRole(e.target.value as "USER" | "ADMIN")
-                    }
+                    value={selectedDepartmentId}
+                    onChange={(e) => {
+                      setSelectedDepartmentId(e.target.value);
+                      setSelectedJobPositionId("");
+                    }}
                     className="outline-none w-full bg-transparent text-sm text-stone-700 appearance-none cursor-pointer"
                   >
-                    <option value="USER">Colaborador Comum (USER)</option>
-                    <option value="ADMIN">Administrador / RH (ADMIN)</option>
+                    <option value="">-- Selecione o Setor --</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
                   </select>
                   <div className="pointer-events-none pr-1 flex items-center justify-center text-stone-400">
                     <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
@@ -487,10 +524,71 @@ export default function AdmissionModal({
                   </div>
                 </div>
               </div>
+
+              {/* Input: Cargo */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-stone-600/80 uppercase tracking-wider ml-1">
+                  Cargo
+                </label>
+                <div className="flex w-full border border-stone-400/50 rounded-xl py-3 px-3 gap-2 items-center bg-transparent">
+                  <Briefcase size={18} className="text-stone-400 shrink-0" />
+                  <select
+                    required
+                    disabled={loading || !!successMsg || !selectedDepartmentId}
+                    value={selectedJobPositionId}
+                    onChange={(e) => setSelectedJobPositionId(e.target.value)}
+                    className="outline-none w-full bg-transparent text-sm text-stone-700 appearance-none cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="">-- Selecione o Cargo --</option>
+                    {jobPositions
+                      .filter((pos) => pos.departmentId === selectedDepartmentId)
+                      .map((pos) => (
+                        <option key={pos.id} value={pos.id}>
+                          {pos.name}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="pointer-events-none pr-1 flex items-center justify-center text-stone-400">
+                    <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Perfil de Acesso Derivado (Visual) */}
+              {selectedDepartmentId && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider ml-1">
+                    Nível de Acesso Derivado
+                  </span>
+                  <div>
+                    {(() => {
+                      const deptName = departments.find((d) => d.id === selectedDepartmentId)?.name || "";
+                      const normalized = deptName.trim().toUpperCase();
+                      const isAdmin =
+                        normalized === "RH" ||
+                        normalized === "RECURSOS HUMANOS" ||
+                        normalized === "DP" ||
+                        normalized === "DEPARTAMENTO PESSOAL";
+
+                      return isAdmin ? (
+                        <span className="inline-flex items-center text-xs font-bold bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg border border-amber-200">
+                          Administrador (Acesso Completo)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-xs font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg border border-blue-100">
+                          Colaborador Comum (Acesso Limitado)
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* COLUNA DIREITA: Gerenciador de Campos (Com Scroll) */}
-            <div className="w-full md:w-[55%] p-6 flex flex-col gap-5 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+            <div className="w-full md:w-[55%] p-6 flex flex-col gap-5 md:overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
               <h3 className="text-sm font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2 border-b border-stone-50 pb-2 shrink-0">
                 <FileSpreadsheet size={16} className="text-blue-500" />
                 2. Ficha Admissional Exigida

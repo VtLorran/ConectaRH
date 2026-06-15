@@ -155,7 +155,32 @@ export async function PATCH(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     if (status === "ACTIVE") {
-      // 1. Cria o usuário ativo primeiro, validando se CPF ou E-mail já estão em uso no sistema
+      // Validar CPF ou Email duplicado antes de criar o usuário
+      const cleanCpf = admission.candidateCpf.replace(/\D/g, "");
+      const formattedCpf = `${cleanCpf.slice(0, 3)}.${cleanCpf.slice(3, 6)}.${cleanCpf.slice(6, 9)}-${cleanCpf.slice(9, 11)}`;
+
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { cpf: cleanCpf },
+            { cpf: formattedCpf },
+            { email: admission.candidateEmail.trim().toLowerCase() },
+          ],
+        },
+      });
+
+      if (existingUser) {
+        const field = existingUser.email === admission.candidateEmail.trim().toLowerCase() ? "e-mail" : "CPF";
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: `Não foi possível aprovar a admissão pois já existe um usuário cadastrado com este ${field} no sistema.` 
+          },
+          { status: 400 },
+        );
+      }
+
+      // 1. Cria o usuário ativo primeiro
       try {
         await prisma.user.create({
           data: {
@@ -165,6 +190,7 @@ export async function PATCH(
             password: admission.candidatePassword,
             role: admission.candidateRole,
             avatar: admission.candidateAvatar,
+            jobPositionId: admission.jobPositionId,
           },
         });
       } catch (err: any) {
