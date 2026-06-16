@@ -11,13 +11,30 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Helper para validar as credenciais antes do envio
+function validateEnv() {
+  const user = process.env.EMAIL_USER;
+  const pass = process.env.EMAIL_PASS;
+  
+  if (!user || !pass) {
+    console.error("ERRO DE CONFIGURAÇÃO DE EMAIL: EMAIL_USER ou EMAIL_PASS não estão definidos no ambiente!");
+    return false;
+  }
+  return true;
+}
+
 export async function sendInvitationEmail(
   email: string,
   name: string,
   inviteLink: string,
 ) {
   try {
-    await transporter.sendMail({
+    console.log(`[Mail] Iniciando envio de convite para: ${email}`);
+    if (!validateEnv()) {
+      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+    }
+
+    const info = await transporter.sendMail({
       from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Bem-vindo! Complete sua admissão",
@@ -35,10 +52,13 @@ export async function sendInvitationEmail(
         </div>
       `,
     });
+    console.log("[Mail] Convite enviado com sucesso. Message ID:", info.messageId);
   } catch (error) {
     console.error("Erro ao enviar email com Nodemailer:", error);
+    throw error; // Propaga o erro para que a API saiba que falhou
   }
 }
+
 
 export async function sendApprovalEmail(
   email: string,
@@ -46,7 +66,12 @@ export async function sendApprovalEmail(
   loginLink: string,
 ) {
   try {
-    await transporter.sendMail({
+    console.log(`[Mail] Iniciando envio de e-mail de aprovação para: ${email}`);
+    if (!validateEnv()) {
+      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+    }
+
+    const info = await transporter.sendMail({
       from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Parabéns! Sua admissão foi aprovada 🎉",
@@ -68,8 +93,10 @@ export async function sendApprovalEmail(
         </div>
       `,
     });
+    console.log("[Mail] E-mail de aprovação enviado com sucesso. Message ID:", info.messageId);
   } catch (error) {
     console.error("Erro ao enviar email de aprovação:", error);
+    throw error;
   }
 }
 
@@ -78,7 +105,12 @@ export async function sendRefusedPermanentEmail(
   name: string,
 ) {
   try {
-    await transporter.sendMail({
+    console.log(`[Mail] Iniciando envio de e-mail de recusa permanente para: ${email}`);
+    if (!validateEnv()) {
+      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+    }
+
+    const info = await transporter.sendMail({
       from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Atualização sobre seu processo admissional - ConectaRH",
@@ -95,8 +127,10 @@ export async function sendRefusedPermanentEmail(
         </div>
       `,
     });
+    console.log("[Mail] E-mail de recusa permanente enviado com sucesso. Message ID:", info.messageId);
   } catch (error) {
     console.error("Erro ao enviar email de recusa permanente:", error);
+    throw error;
   }
 }
 
@@ -107,7 +141,12 @@ export async function sendRefusedForCorrectionEmail(
   correctionLink: string,
 ) {
   try {
-    await transporter.sendMail({
+    console.log(`[Mail] Iniciando envio de e-mail de correção para: ${email}`);
+    if (!validateEnv()) {
+      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+    }
+
+    const info = await transporter.sendMail({
       from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Atenção: Necessário realizar correções na sua admissão - ConectaRH",
@@ -132,7 +171,9 @@ export async function sendRefusedForCorrectionEmail(
         </div>
       `,
     });
+    console.log("[Mail] E-mail de correção enviado com sucesso. Message ID:", info.messageId);
   } catch (error) {
     console.error("Erro ao enviar email de solicitação de correção:", error);
+    throw error;
   }
 }
