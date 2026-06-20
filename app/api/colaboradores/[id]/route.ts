@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+function cleanFormData(formData: any) {
+  if (!formData) return null;
+  const rawFormData = formData as Record<string, any>;
+  const cleaned: Record<string, any> = {};
+  for (const [key, value] of Object.entries(rawFormData)) {
+    if (typeof value === "string") {
+      if (value.startsWith("data:application/pdf;base64,")) {
+        cleaned[key] = "data:application/pdf;base64,PLACEHOLDER";
+      } else if (value.startsWith("data:image/")) {
+        const match = value.match(/^(data:image\/[a-zA-Z+.-]+;base64,)/);
+        if (match) {
+          cleaned[key] = `${match[1]}PLACEHOLDER`;
+        } else {
+          cleaned[key] = value;
+        }
+      } else {
+        cleaned[key] = value;
+      }
+    } else {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<any> },
@@ -94,7 +120,7 @@ export async function GET(
       status: displayStatus,
       jobPositionId: userData.jobPositionId,
       jobPosition: userData.jobPosition,
-      formData: admissionData?.formData || null,
+      formData: cleanFormData(admissionData?.formData),
       createdAt: userData.createdAt,
     };
 
@@ -188,12 +214,26 @@ export async function PATCH(
     }
 
     if (formData !== undefined && formData !== null) {
+      const existingAdmission = await prisma.admission.findFirst({
+        where: { candidateCpf: updatedUser.cpf },
+        select: { formData: true },
+      });
+      const dbFormData = (existingAdmission?.formData as Record<string, any>) || {};
+      const mergedFormData: Record<string, any> = {};
+      for (const [key, value] of Object.entries(formData)) {
+        if (typeof value === "string" && value.endsWith("PLACEHOLDER")) {
+          mergedFormData[key] = dbFormData[key] || value;
+        } else {
+          mergedFormData[key] = value;
+        }
+      }
+
       await prisma.admission.updateMany({
         where: {
           candidateCpf: updatedUser.cpf,
         },
         data: {
-          formData: formData,
+          formData: mergedFormData,
         },
       });
     }
@@ -206,7 +246,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         ...updatedUser,
-        formData: currentAdmission?.formData || null,
+        formData: cleanFormData(currentAdmission?.formData),
       },
       { status: 200 },
     );

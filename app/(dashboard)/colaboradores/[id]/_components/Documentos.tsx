@@ -11,6 +11,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Trash2,
+  Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
 import Modal from "@/components/Modal";
 import InputField from "@/components/InputField";
@@ -40,6 +42,7 @@ export default function Documentos({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [loadingFileKey, setLoadingFileKey] = useState<string | null>(null);
 
   const isBase64Pdf = (value: unknown): boolean => {
     return typeof value === "string" && value.startsWith("data:application/pdf;base64,");
@@ -61,13 +64,36 @@ export default function Documentos({
     ([, value]) => isBase64Pdf(value) || isBase64Image(value)
   ) as [string, string][];
 
-  const handlePreviewFile = (key: string, fileData: string) => {
+  const fetchFullFile = async (key: string): Promise<string> => {
+    const res = await fetch(`/api/colaboradores/${collaboratorId}/documento?key=${encodeURIComponent(key)}`);
+    if (!res.ok) {
+      throw new Error("Erro ao buscar o arquivo completo no servidor.");
+    }
+    const data = await res.json();
+    return data.fileData;
+  };
+
+  const handlePreviewFile = async (key: string, fileData: string) => {
     if (!fileData) return;
-    if (isBase64Pdf(fileData)) {
-      setActivePdfBase64(fileData);
+    let dataToPreview = fileData;
+    if (fileData.endsWith("PLACEHOLDER")) {
+      setLoadingFileKey(key);
+      try {
+        dataToPreview = await fetchFullFile(key);
+      } catch (err) {
+        console.error(err);
+        alert("Não foi possível carregar o arquivo.");
+        setLoadingFileKey(null);
+        return;
+      }
+      setLoadingFileKey(null);
+    }
+
+    if (isBase64Pdf(dataToPreview)) {
+      setActivePdfBase64(dataToPreview);
       setActivePdfName(key);
-    } else if (isBase64Image(fileData)) {
-      setActiveImageBase64(fileData);
+    } else if (isBase64Image(dataToPreview)) {
+      setActiveImageBase64(dataToPreview);
       setActiveImageName(key);
     } else {
       try {
@@ -76,7 +102,7 @@ export default function Documentos({
           newWindow.document.title = "Pré-visualização do Arquivo";
           newWindow.document.write(
             `<body style="margin:0; background: #262626; display: flex; align-items: center; justify-content: center;">
-              <embed src="${fileData}" width="100%" height="100%" />
+              <embed src="${dataToPreview}" width="100%" height="100%" />
             </body>`
           );
           newWindow.document.close();
@@ -84,11 +110,33 @@ export default function Documentos({
       } catch (e) {
         console.error(e);
         const link = document.createElement("a");
-        link.href = fileData;
+        link.href = dataToPreview;
         link.target = "_blank";
         link.click();
       }
     }
+  };
+
+  const handleDownloadFile = async (key: string, fileData: string, fieldName: string) => {
+    let dataToDownload = fileData;
+    if (fileData.endsWith("PLACEHOLDER")) {
+      setLoadingFileKey(key);
+      try {
+        dataToDownload = await fetchFullFile(key);
+      } catch (err) {
+        console.error(err);
+        alert("Não foi possível carregar o arquivo.");
+        setLoadingFileKey(null);
+        return;
+      }
+      setLoadingFileKey(null);
+    }
+
+    const link = document.createElement("a");
+    link.href = dataToDownload;
+    const extension = isBase64Pdf(dataToDownload) ? "pdf" : "png";
+    link.download = `${fieldName}.${extension}`;
+    link.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,26 +297,37 @@ export default function Documentos({
                 <div className="flex gap-2 items-center mt-auto">
                   <button
                     type="button"
+                    disabled={loadingFileKey !== null}
                     onClick={() => handlePreviewFile(key, value)}
-                    className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                    className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
                     title="Visualizar PDF"
                   >
-                    <Eye size={16} />
+                    {loadingFileKey === key ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Eye size={16} />
+                    )}
                   </button>
-
-                  <a
-                    href={value}
-                    download={`${fieldName}.pdf`}
-                    className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
-                    title="Instalar / Baixar PDF"
-                  >
-                    <Download size={16} />
-                  </a>
 
                   <button
                     type="button"
+                    disabled={loadingFileKey !== null}
+                    onClick={() => handleDownloadFile(key, value, fieldName)}
+                    className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                    title="Instalar / Baixar PDF"
+                  >
+                    {loadingFileKey === key ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={loadingFileKey !== null}
                     onClick={() => handleDeleteDocument(key)}
-                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
                     title="Excluir Documento"
                   >
                     <Trash2 size={16} />
@@ -282,44 +341,51 @@ export default function Documentos({
             return (
               <div
                 key={key}
-                className="flex flex-col justify-between gap-4 bg-stone-50/50 p-5 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[220px]"
+                className="flex flex-col justify-between gap-4 bg-stone-50/50 p-5 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[160px]"
               >
-                <div className="flex flex-col gap-3 min-w-0">
+                <div className="flex flex-col gap-1 min-w-0">
                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
                     {formatFieldName(key)}
                   </span>
-                  <div className="relative group w-fit max-w-full">
-                    <img
-                      src={value}
-                      alt={formatFieldName(key)}
-                      className="max-h-40 rounded-xl object-contain border border-stone-200 shadow-sm transition-all duration-200 hover:scale-[1.02] bg-stone-100 cursor-pointer"
-                      onClick={() => handlePreviewFile(key, value)}
-                    />
-                  </div>
+                  <span className="text-xs text-stone-500 italic mt-1.5 flex items-center gap-1.5">
+                    <ImageIcon size={14} className="text-emerald-500 shrink-0" />
+                    Imagem / Foto enviada
+                  </span>
                 </div>
                 <div className="flex gap-2 items-center mt-auto">
                   <button
                     type="button"
+                    disabled={loadingFileKey !== null}
                     onClick={() => handlePreviewFile(key, value)}
-                    className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                    className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
                     title="Visualizar Foto"
                   >
-                    <Eye size={16} />
+                    {loadingFileKey === key ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Eye size={16} />
+                    )}
                   </button>
-
-                  <a
-                    href={value}
-                    download={`${fieldName}.png`}
-                    className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
-                    title="Instalar / Baixar Foto"
-                  >
-                    <Download size={16} />
-                  </a>
 
                   <button
                     type="button"
+                    disabled={loadingFileKey !== null}
+                    onClick={() => handleDownloadFile(key, value, fieldName)}
+                    className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                    title="Instalar / Baixar Foto"
+                  >
+                    {loadingFileKey === key ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={loadingFileKey !== null}
                     onClick={() => handleDeleteDocument(key)}
-                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
                     title="Excluir Documento"
                   >
                     <Trash2 size={16} />

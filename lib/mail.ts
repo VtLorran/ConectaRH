@@ -21,6 +21,7 @@ export async function sendInvitationEmail(
   email: string,
   name: string,
   inviteLink: string,
+  isResend: boolean = false,
 ) {
   try {
     console.log(`[Mail Resend] Enviando convite para: ${email}`);
@@ -31,7 +32,9 @@ export async function sendInvitationEmail(
     const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: email,
-      subject: "Bem-vindo! Complete sua admissão",
+      subject: isResend
+        ? "Lembrete: Complete sua admissão"
+        : "Bem-vindo! Complete sua admissão",
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
           <div style="text-align: center; margin-bottom: 24px;">

@@ -54,6 +54,7 @@ export async function POST(
       admission.candidateEmail,
       admission.candidateName,
       inviteLink,
+      true,
     );
     log("E-mail enviado com sucesso!");
 
