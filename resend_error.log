@@ -1,0 +1,6 @@
+[2026-06-20T12:37:26.013Z] Iniciando POST /api/admission/[id]/resend
+[2026-06-20T12:37:26.013Z] admissionId resolvido: b1fc7725-afe8-4bd5-b999-4317e7a0dee8
+[2026-06-20T12:37:26.183Z] Admissão encontrada: {"id":"b1fc7725-afe8-4bd5-b999-4317e7a0dee8","candidateName":"Vítor Lorran de C. Rocha","candidateEmail":"ajudaconectarh@gmail.com","candidateCpf":"10987654321","candidatePassword":null,"candidateAvatar":null,"status":"INVITED","justification":null,"candidateRole":"ADMIN","jobPositionId":"64bd7212-5c4f-4411-8a6c-625d659c83d8","formConfig":["foto:FILE","telefone:TEXT","endereco:TEXT","nascimento:TEXT","instituição_de_ensino:TEXT","comprovante_residencia:FILE","diploma:FILE","rg:FILE","titulo_eleitor:FILE"],"formData":null,"createdById":"53ec38d3-7e39-4fb0-8292-cb2b8ace87fa","templateId":null,"createdAt":"2026-06-20T11:34:32.910Z","updatedAt":"2026-06-20T11:34:32.910Z"}
+[2026-06-20T12:37:26.184Z] inviteLink gerado: http://localhost:3000/admissao/b1fc7725-afe8-4bd5-b999-4317e7a0dee8
+[2026-06-20T12:37:26.184Z] Disparando e-mail de convite...
+[2026-06-20T12:37:27.831Z] E-mail enviado com sucesso!
