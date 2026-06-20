@@ -89,8 +89,8 @@ export async function POST(request: Request) {
         createdById: hrUserId, // Relaciona com o RH que criou
       },
     });
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const inviteLink = `${baseUrl}/admissao/${newAdmission.id}`;
+    const { origin } = new URL(request.url);
+    const inviteLink = `${origin}/admissao/${newAdmission.id}`;
 
     await sendInvitationEmail(email, name, inviteLink);
 

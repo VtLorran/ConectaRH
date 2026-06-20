@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ReviewList } from "@/components/List";
-import { CheckCircle, File, RefreshCcw, Plus, Loader2 } from "lucide-react";
+import { CheckCircle, File, RefreshCcw, Plus, Loader2, Send } from "lucide-react";
 import AdmissionModal from "@/components/AdmissionModal";
 
 interface Stats {
@@ -35,6 +35,7 @@ export default function AdmissaoPage() {
   });
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [recentApprovals, setRecentApprovals] = useState<Candidate[]>([]);
+  const [invitedCandidates, setInvitedCandidates] = useState<Candidate[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -46,6 +47,7 @@ export default function AdmissaoPage() {
         setStats(result.data.cards);
         setCandidates(result.data.reviewList || []);
         setRecentApprovals(result.data.recentApprovals || []);
+        setInvitedCandidates(result.data.invitedList || []);
       }
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard de admissão:", error);
@@ -213,52 +215,84 @@ export default function AdmissaoPage() {
         </div>
       </div>
 
-      {/* Seção Inferior: Lista e Mini Card */}
+      {/* Seção Inferior: Lista e Mini Cards */}
       <div className="w-full flex flex-col lg:flex-row gap-6 lg:gap-14 mt-4">
         {/* Lista de candidatos em análise da API */}
         <ReviewList candidates={candidates} />
 
-        {/* LADO DIREITO: Mini Card de Últimas Admissões conectada à API */}
-        <div className="w-full lg:w-[420px] bg-white rounded-2xl shadow-xl p-6 border border-stone-100 flex flex-col">
-          <div className="border-b border-stone-100 pb-4 mb-4">
-            <h2 className="text-lg font-bold text-stone-700">
-              Últimas Aprovações
-            </h2>
+        {/* LADO DIREITO: Mini Cards */}
+        <div className="w-full lg:w-[420px] flex flex-col gap-6">
+          {/* Card 1: Formulários Enviados */}
+          <div className="w-full bg-white rounded-2xl shadow-xl p-6 border border-stone-100 flex flex-col">
+            <div className="border-b border-stone-100 pb-4 mb-4 flex justify-between items-center">
+              <h2 className="text-lg font-bold text-stone-700">
+                Formulários Enviados
+              </h2>
+              <span className="text-xs bg-blue-50 text-blue-600 font-bold px-2 py-0.5 rounded-lg border border-blue-100">
+                Aguardando
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-200">
+              {invitedCandidates.length === 0 ? (
+                <p className="text-xs text-stone-400 py-6 text-center italic">
+                  Nenhum formulário pendente de envio.
+                </p>
+              ) : (
+                invitedCandidates.map((invited) => (
+                  <InvitedRow
+                    key={invited.id}
+                    invited={invited}
+                    formatDate={formatDate}
+                    onResendSuccess={fetchDashboardData}
+                  />
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2 max-h-[420px] overflow-y-auto pr-1">
-            {recentApprovals.length === 0 ? (
-              <p className="text-xs text-stone-400 py-6 text-center italic">
-                Nenhuma admissão finalizada recentemente.
-              </p>
-            ) : (
-              recentApprovals.map((approval) => (
-                <div
-                  key={approval.id}
-                  className="flex items-center gap-4 py-3 border-b border-stone-50 last:border-0 hover:bg-stone-50/50 rounded-xl px-2 transition-colors"
-                >
-                  <img
-                    src={
-                      approval.candidateAvatar ||
-                      `https://ui-avatars.com/api/?name=${encodeURIComponent(approval.candidateName)}&background=F5F5F4&color=44403C`
-                    }
-                    alt={`Avatar de ${approval.candidateName}`}
-                    className="h-10 w-10 rounded-full object-cover border border-stone-200"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm text-stone-700 truncate">
-                      {approval.candidateName}
-                    </h3>
-                    <p className="text-xs text-stone-500 truncate">
-                      {approval.candidateEmail}
-                    </p>
+          {/* Card 2: Últimas Admissões conectada à API */}
+          <div className="w-full bg-white rounded-2xl shadow-xl p-6 border border-stone-100 flex flex-col">
+            <div className="border-b border-stone-100 pb-4 mb-4">
+              <h2 className="text-lg font-bold text-stone-700">
+                Últimas Aprovações
+              </h2>
+            </div>
+
+            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-200">
+              {recentApprovals.length === 0 ? (
+                <p className="text-xs text-stone-400 py-6 text-center italic">
+                  Nenhuma admissão finalizada recentemente.
+                </p>
+              ) : (
+                recentApprovals.map((approval) => (
+                  <div
+                    key={approval.id}
+                    className="flex items-center gap-4 py-3 border-b border-stone-50 last:border-0 hover:bg-stone-50/50 rounded-xl px-2 transition-colors"
+                  >
+                    <img
+                      src={
+                        approval.candidateAvatar ||
+                        `https://ui-avatars.com/api/?name=${encodeURIComponent(approval.candidateName)}&background=F5F5F4&color=44403C`
+                      }
+                      alt={`Avatar de ${approval.candidateName}`}
+                      className="h-10 w-10 rounded-full object-cover border border-stone-200"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm text-stone-700 truncate">
+                        {approval.candidateName}
+                      </h3>
+                      <p className="text-xs text-stone-500 truncate">
+                        {approval.candidateEmail}
+                      </p>
+                    </div>
+                    <div className="text-xs font-bold text-[#10B981] bg-green-50 px-2.5 py-1 rounded-lg shrink-0">
+                      {formatDate(approval.updatedAt)}
+                    </div>
                   </div>
-                  <div className="text-xs font-bold text-[#10B981] bg-green-50 px-2.5 py-1 rounded-lg shrink-0">
-                    {formatDate(approval.updatedAt)}
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -271,5 +305,89 @@ export default function AdmissaoPage() {
         hrUserId={currentUser?.id || ""}
       />
     </section>
+  );
+}
+
+function InvitedRow({
+  invited,
+  formatDate,
+  onResendSuccess,
+}: {
+  invited: any;
+  formatDate: (d: string) => string;
+  onResendSuccess: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [statusText, setStatusText] = useState<string | null>(null);
+
+  const handleResend = async () => {
+    setLoading(true);
+    setStatusText(null);
+    try {
+      const res = await fetch(`/api/admission/${invited.id}/resend`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStatusText("Enviado!");
+        setTimeout(() => {
+          setStatusText(null);
+          onResendSuccess();
+        }, 3000);
+      } else {
+        setStatusText(data.message || "Erro ao enviar");
+        setTimeout(() => setStatusText(null), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      setStatusText("Erro de rede");
+      setTimeout(() => setStatusText(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-stone-50 last:border-0 hover:bg-stone-50/50 rounded-xl px-2 transition-colors">
+      <div className="flex items-center gap-3 min-w-0">
+        <img
+          src={
+            invited.candidateAvatar ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(invited.candidateName)}&background=F5F5F4&color=44403C`
+          }
+          alt={`Avatar de ${invited.candidateName}`}
+          className="h-10 w-10 rounded-full object-cover border border-stone-200 shrink-0"
+        />
+        <div className="min-w-0">
+          <h3 className="font-semibold text-sm text-stone-700 truncate">
+            {invited.candidateName}
+          </h3>
+          <p className="text-xs text-stone-500 truncate">{invited.candidateEmail}</p>
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        <span className="text-[10px] text-stone-400 font-medium">
+          Enviado: {formatDate(invited.updatedAt)}
+        </span>
+        <button
+          onClick={handleResend}
+          disabled={loading || statusText !== null}
+          className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-80 ${
+            statusText === "Enviado!"
+              ? "bg-green-50 text-green-700 border-green-200"
+              : statusText?.startsWith("Erro")
+              ? "bg-red-50 text-red-700 border-red-200"
+              : "bg-stone-50 hover:bg-blue-50 hover:text-[#3B82F6] hover:border-blue-200 text-stone-600 border-stone-200 active:scale-95"
+          }`}
+        >
+          {loading ? (
+            <Loader2 className="h-3 w-3 animate-spin text-[#3B82F6]" />
+          ) : (
+            <Send className="h-3 w-3" />
+          )}
+          {statusText || "Reenviar"}
+        </button>
+      </div>
+    </div>
   );
 }

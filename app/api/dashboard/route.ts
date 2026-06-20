@@ -9,6 +9,8 @@ export async function GET(request: Request) {
       candidatesUnderReview,
 
       recentApprovals,
+
+      invitedCandidates,
     ] = await Promise.all([
 
       prisma.admission.groupBy({
@@ -46,6 +48,21 @@ export async function GET(request: Request) {
         },
         take: 5,
       }),
+
+      prisma.admission.findMany({
+        where: { status: "INVITED" },
+        select: {
+          id: true,
+          candidateName: true,
+          candidateEmail: true,
+          candidateAvatar: true,
+          updatedAt: true,
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+        take: 10,
+      }),
     ]);
 
     const counts = {
@@ -65,6 +82,7 @@ export async function GET(request: Request) {
           cards: counts,
           reviewList: candidatesUnderReview,
           recentApprovals: recentApprovals,
+          invitedList: invitedCandidates,
         },
       },
       { status: 200 },

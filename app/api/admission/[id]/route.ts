@@ -152,7 +152,7 @@ export async function PATCH(
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const { origin } = new URL(request.url);
 
     if (status === "ACTIVE") {
       // Validar CPF ou Email duplicado antes de criar o usuário
@@ -217,7 +217,7 @@ export async function PATCH(
       });
 
       // 2. Dispara e-mail de congratulação e login
-      const loginLink = `${baseUrl}/login`;
+      const loginLink = `${origin}/login`;
       await sendApprovalEmail(
         admission.candidateEmail,
         admission.candidateName,
@@ -271,7 +271,7 @@ export async function PATCH(
         });
 
         // 2. Envia e-mail de correção com link do formulário e justificativa
-        const correctionLink = `${baseUrl}/admissao/${admissionId}`;
+        const correctionLink = `${origin}/admissao/${admissionId}`;
         await sendRefusedForCorrectionEmail(
           admission.candidateEmail,
           admission.candidateName,
