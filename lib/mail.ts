@@ -28,7 +28,7 @@ export async function sendInvitationEmail(
       throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const data = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: email,
       subject: "Bem-vindo! Complete sua admissão",
@@ -47,7 +47,11 @@ export async function sendInvitationEmail(
       `,
     });
 
-    console.log("[Mail Resend] Convite enviado com sucesso. ID:", data.data?.id);
+    if (error) {
+      throw new Error(`Erro do Resend: ${error.message} (${error.name})`);
+    }
+
+    console.log("[Mail Resend] Convite enviado com sucesso. ID:", data?.id);
   } catch (error) {
     console.error("Erro ao enviar email com Resend:", error);
     throw error;
@@ -65,7 +69,7 @@ export async function sendApprovalEmail(
       throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const data = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: email,
       subject: "Parabéns! Sua admissão foi aprovada 🎉",
@@ -88,7 +92,11 @@ export async function sendApprovalEmail(
       `,
     });
 
-    console.log("[Mail Resend] E-mail de aprovação enviado com sucesso. ID:", data.data?.id);
+    if (error) {
+      throw new Error(`Erro do Resend: ${error.message} (${error.name})`);
+    }
+
+    console.log("[Mail Resend] E-mail de aprovação enviado com sucesso. ID:", data?.id);
   } catch (error) {
     console.error("Erro ao enviar email de aprovação:", error);
     throw error;
@@ -105,7 +113,7 @@ export async function sendRefusedPermanentEmail(
       throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const data = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: email,
       subject: "Atualização sobre seu processo admissional - ConectaRH",
@@ -123,7 +131,11 @@ export async function sendRefusedPermanentEmail(
       `,
     });
 
-    console.log("[Mail Resend] E-mail de recusa permanente enviado com sucesso. ID:", data.data?.id);
+    if (error) {
+      throw new Error(`Erro do Resend: ${error.message} (${error.name})`);
+    }
+
+    console.log("[Mail Resend] E-mail de recusa permanente enviado com sucesso. ID:", data?.id);
   } catch (error) {
     console.error("Erro ao enviar email de recusa permanente:", error);
     throw error;
@@ -142,7 +154,7 @@ export async function sendRefusedForCorrectionEmail(
       throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const data = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: getFromAddress(),
       to: email,
       subject: "Atenção: Necessário realizar correções na sua admissão - ConectaRH",
@@ -168,7 +180,11 @@ export async function sendRefusedForCorrectionEmail(
       `,
     });
 
-    console.log("[Mail Resend] E-mail de correção enviado com sucesso. ID:", data.data?.id);
+    if (error) {
+      throw new Error(`Erro do Resend: ${error.message} (${error.name})`);
+    }
+
+    console.log("[Mail Resend] E-mail de correção enviado com sucesso. ID:", data?.id);
   } catch (error) {
     console.error("Erro ao enviar email de solicitação de correção:", error);
     throw error;
