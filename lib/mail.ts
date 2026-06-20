@@ -1,27 +1,21 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-// Configuração do transportador (exemplo Gmail)
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // Use true para a porta 465, false para outras portas
-  auth: {
-    user: process.env.EMAIL_USER, // Seu e-mail: xxxx@gmail.com
-    pass: process.env.EMAIL_PASS, // Sua "Senha de App" gerada no Google
-  },
-});
+// Inicializa o cliente do Resend usando a chave do ambiente
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Helper para validar as credenciais antes do envio
+// Helper para validar a chave do Resend
 function validateEnv() {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
-  
-  if (!user || !pass) {
-    console.error("ERRO DE CONFIGURAÇÃO DE EMAIL: EMAIL_USER ou EMAIL_PASS não estão definidos no ambiente!");
+  if (!process.env.RESEND_API_KEY) {
+    console.error("ERRO DE CONFIGURAÇÃO DE EMAIL: RESEND_API_KEY não está definida no ambiente!");
     return false;
   }
   return true;
 }
+
+// Obtém o remetente configurado ou usa o padrão de testes do Resend
+const getFromAddress = () => {
+  return process.env.EMAIL_FROM || "ConectaRH <onboarding@resend.dev>";
+};
 
 export async function sendInvitationEmail(
   email: string,
@@ -29,13 +23,13 @@ export async function sendInvitationEmail(
   inviteLink: string,
 ) {
   try {
-    console.log(`[Mail] Iniciando envio de convite para: ${email}`);
+    console.log(`[Mail Resend] Enviando convite para: ${email}`);
     if (!validateEnv()) {
-      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+      throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const info = await transporter.sendMail({
-      from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
+    const data = await resend.emails.send({
+      from: getFromAddress(),
       to: email,
       subject: "Bem-vindo! Complete sua admissão",
       html: `
@@ -52,13 +46,13 @@ export async function sendInvitationEmail(
         </div>
       `,
     });
-    console.log("[Mail] Convite enviado com sucesso. Message ID:", info.messageId);
+
+    console.log("[Mail Resend] Convite enviado com sucesso. ID:", data.data?.id);
   } catch (error) {
-    console.error("Erro ao enviar email com Nodemailer:", error);
-    throw error; // Propaga o erro para que a API saiba que falhou
+    console.error("Erro ao enviar email com Resend:", error);
+    throw error;
   }
 }
-
 
 export async function sendApprovalEmail(
   email: string,
@@ -66,13 +60,13 @@ export async function sendApprovalEmail(
   loginLink: string,
 ) {
   try {
-    console.log(`[Mail] Iniciando envio de e-mail de aprovação para: ${email}`);
+    console.log(`[Mail Resend] Enviando aprovação para: ${email}`);
     if (!validateEnv()) {
-      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+      throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const info = await transporter.sendMail({
-      from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
+    const data = await resend.emails.send({
+      from: getFromAddress(),
       to: email,
       subject: "Parabéns! Sua admissão foi aprovada 🎉",
       html: `
@@ -93,7 +87,8 @@ export async function sendApprovalEmail(
         </div>
       `,
     });
-    console.log("[Mail] E-mail de aprovação enviado com sucesso. Message ID:", info.messageId);
+
+    console.log("[Mail Resend] E-mail de aprovação enviado com sucesso. ID:", data.data?.id);
   } catch (error) {
     console.error("Erro ao enviar email de aprovação:", error);
     throw error;
@@ -105,13 +100,13 @@ export async function sendRefusedPermanentEmail(
   name: string,
 ) {
   try {
-    console.log(`[Mail] Iniciando envio de e-mail de recusa permanente para: ${email}`);
+    console.log(`[Mail Resend] Enviando recusa permanente para: ${email}`);
     if (!validateEnv()) {
-      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+      throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const info = await transporter.sendMail({
-      from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
+    const data = await resend.emails.send({
+      from: getFromAddress(),
       to: email,
       subject: "Atualização sobre seu processo admissional - ConectaRH",
       html: `
@@ -127,7 +122,8 @@ export async function sendRefusedPermanentEmail(
         </div>
       `,
     });
-    console.log("[Mail] E-mail de recusa permanente enviado com sucesso. Message ID:", info.messageId);
+
+    console.log("[Mail Resend] E-mail de recusa permanente enviado com sucesso. ID:", data.data?.id);
   } catch (error) {
     console.error("Erro ao enviar email de recusa permanente:", error);
     throw error;
@@ -141,13 +137,13 @@ export async function sendRefusedForCorrectionEmail(
   correctionLink: string,
 ) {
   try {
-    console.log(`[Mail] Iniciando envio de e-mail de correção para: ${email}`);
+    console.log(`[Mail Resend] Enviando solicitação de correção para: ${email}`);
     if (!validateEnv()) {
-      throw new Error("Credenciais de e-mail ausentes no ambiente.");
+      throw new Error("RESEND_API_KEY ausente no ambiente.");
     }
 
-    const info = await transporter.sendMail({
-      from: `"Sistema ConectaRH" <${process.env.EMAIL_USER}>`,
+    const data = await resend.emails.send({
+      from: getFromAddress(),
       to: email,
       subject: "Atenção: Necessário realizar correções na sua admissão - ConectaRH",
       html: `
@@ -171,7 +167,8 @@ export async function sendRefusedForCorrectionEmail(
         </div>
       `,
     });
-    console.log("[Mail] E-mail de correção enviado com sucesso. Message ID:", info.messageId);
+
+    console.log("[Mail Resend] E-mail de correção enviado com sucesso. ID:", data.data?.id);
   } catch (error) {
     console.error("Erro ao enviar email de solicitação de correção:", error);
     throw error;
