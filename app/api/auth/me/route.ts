@@ -22,6 +22,27 @@ export async function GET() {
 
     const decoded = jwt.verify(token, secret) as { userID: string; role: string; cpf?: string };
 
+    function cleanAnswers(answers: any) {
+      if (!answers || !Array.isArray(answers)) return answers;
+      return answers.map((ans: any) => {
+        let cleanedValue = ans.value;
+        if (typeof ans.value === "string") {
+          if (ans.value.startsWith("data:application/pdf;base64,")) {
+            cleanedValue = "data:application/pdf;base64,PLACEHOLDER";
+          } else if (ans.value.startsWith("data:image/")) {
+            const match = ans.value.match(/^(data:image\/[a-zA-Z+.-]+;base64,)/);
+            if (match) {
+              cleanedValue = `${match[1]}PLACEHOLDER`;
+            }
+          }
+        }
+        return {
+          ...ans,
+          value: cleanedValue
+        };
+      });
+    }
+
     // Dispara a busca do usuário
     const userPromise = prisma.user.findUnique({
       where: { id: decoded.userID },
@@ -44,6 +65,18 @@ export async function GET() {
                 name: true,
               },
             },
+          },
+        },
+        documentRequests: {
+          select: {
+            id: true,
+            requirements: true,
+            answers: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: {
+            createdAt: "desc",
           },
         },
       },
@@ -94,6 +127,10 @@ export async function GET() {
       data: {
         ...user,
         admissionData: admission?.formData || null,
+        documentRequests: user.documentRequests.map((req) => ({
+          ...req,
+          answers: cleanAnswers(req.answers),
+        })),
       },
     });
   } catch (error) {

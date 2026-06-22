@@ -50,6 +50,7 @@ interface CollaboratorData {
   } | null;
   formData: Record<string, any> | null;
   createdAt?: string | null;
+  documentRequests?: any[];
 }
 
 type TabKey =
@@ -814,12 +815,22 @@ export default function ColaboradorDataPage() {
           <Documentos
             collaboratorId={id as string}
             formData={dynamicFormData}
+            documentRequests={collaborator?.documentRequests || []}
             onUpdate={(updatedData) => {
               setDynamicFormData(updatedData);
               if (collaborator) {
                 setCollaborators({
                   ...collaborator,
                   formData: updatedData,
+                  documentRequests: collaborator.documentRequests,
+                });
+              }
+            }}
+            onUpdateDocumentRequests={(updatedRequests) => {
+              if (collaborator) {
+                setCollaborators({
+                  ...collaborator,
+                  documentRequests: updatedRequests,
                 });
               }
             }}

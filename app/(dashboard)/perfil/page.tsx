@@ -25,6 +25,7 @@ import {
   AlertCircle,
   MessageSquare,
   Check,
+  Upload,
 } from "lucide-react";
 import { formatCPF, formatPhone, formatDate } from "@/lib/masks";
 import SectionComponent from "@/components/SectionComponent";
@@ -53,6 +54,7 @@ interface UserProfile {
     };
   } | null;
   admissionData?: Record<string, any> | null;
+  documentRequests?: any[];
 }
 
 export default function ProfilePage() {
@@ -67,6 +69,11 @@ export default function ProfilePage() {
   const [activePdfName, setActivePdfName] = useState<string>("");
   const [activeImageBase64, setActiveImageBase64] = useState<string | null>(null);
   const [activeImageName, setActiveImageName] = useState<string>("");
+
+  // Estados para Onboarding / Documentos Requeridos
+  const [submittingOnboardingKey, setSubmittingOnboardingKey] = useState<string | null>(null);
+  const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
+  const [loadingFileKey, setLoadingFileKey] = useState<string | null>(null);
 
   // Estados do Scroll dos Cards
   const [vacation, setVacation] = useState("");
@@ -253,10 +260,12 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
-  const fetchVacations = async () => {
+  const fetchVacations = async (userId?: string) => {
+    const idToUse = userId || user?.id;
+    if (!idToUse) return;
     try {
       setLoadingVacations(true);
-      const res = await fetch("/api/ferias");
+      const res = await fetch(`/api/ferias?userId=${idToUse}`);
       const result = await res.json();
       if (result.success) {
         setVacations(result.data);
@@ -269,8 +278,10 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    fetchVacations();
-  }, []);
+    if (user?.id) {
+      fetchVacations(user.id);
+    }
+  }, [user?.id]);
 
   const handleRequestVacation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,6 +358,214 @@ export default function ProfilePage() {
     } catch (error: any) {
       console.error(error);
       alert(error.message || "Erro ao cancelar solicitação.");
+    }
+  };
+
+  const fetchFullOnboardingFile = async (requestId: string, name: string): Promise<string> => {
+    const res = await fetch(`/api/onboarding/${requestId}/documento?name=${encodeURIComponent(name)}`);
+    if (!res.ok) {
+      throw new Error("Erro ao buscar o arquivo completo no servidor.");
+    }
+    const data = await res.json();
+    return data.fileData;
+  };
+
+  const handlePreviewOnboardingFile = async (requestId: string, name: string, fileData: string) => {
+    if (!fileData) return;
+    let dataToPreview = fileData;
+    const fileKey = `${requestId}-${name}`;
+    if (fileData.endsWith("PLACEHOLDER")) {
+      setLoadingFileKey(fileKey);
+      try {
+        dataToPreview = await fetchFullOnboardingFile(requestId, name);
+      } catch (err) {
+        console.error(err);
+        alert("Não foi possível carregar o arquivo.");
+        setLoadingFileKey(null);
+        return;
+      }
+      setLoadingFileKey(null);
+    }
+
+    if (isBase64Pdf(dataToPreview)) {
+      setActivePdfBase64(dataToPreview);
+      setActivePdfName(name);
+    } else if (isBase64Image(dataToPreview)) {
+      setActiveImageBase64(dataToPreview);
+      setActiveImageName(name);
+    }
+  };
+
+  const handleDownloadOnboardingFile = async (requestId: string, name: string, fileData: string) => {
+    let dataToDownload = fileData;
+    const fileKey = `${requestId}-${name}`;
+    if (fileData.endsWith("PLACEHOLDER")) {
+      setLoadingFileKey(fileKey);
+      try {
+        dataToDownload = await fetchFullOnboardingFile(requestId, name);
+      } catch (err) {
+        console.error(err);
+        alert("Não foi possível carregar o arquivo.");
+        setLoadingFileKey(null);
+        return;
+      }
+      setLoadingFileKey(null);
+    }
+
+    const link = document.createElement("a");
+    link.href = dataToDownload;
+    const extension = isBase64Pdf(dataToDownload) ? "pdf" : "png";
+    link.download = `${name}.${extension}`;
+    link.click();
+  };
+
+  const handleOnboardingSubmitText = async (requestId: string, requirementName: string) => {
+    const textVal = textAnswers[`${requestId}-${requirementName}`]?.trim();
+    if (!textVal) return;
+
+    const request = user?.documentRequests?.find((r) => r.id === requestId);
+    if (!request) return;
+
+    setSubmittingOnboardingKey(`${requestId}-${requirementName}`);
+
+    try {
+      const updatedAnswers = (request.answers as any[]).map((ans) => {
+        if (ans.name === requirementName) {
+          return { ...ans, value: textVal };
+        }
+        return ans;
+      });
+
+      const res = await fetch(`/api/onboarding/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: updatedAnswers }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message);
+
+      // Update local state
+      setUser((prev) => {
+        if (!prev) return null;
+        const updatedRequests = (prev.documentRequests || []).map((r) => {
+          if (r.id === requestId) {
+            return { ...r, answers: result.data.answers };
+          }
+          return r;
+        });
+        return { ...prev, documentRequests: updatedRequests };
+      });
+    } catch (err) {
+      alert("Erro ao salvar resposta de texto.");
+    } finally {
+      setSubmittingOnboardingKey(null);
+    }
+  };
+
+  const handleOnboardingUploadFile = async (
+    requestId: string,
+    requirementName: string,
+    file: File
+  ) => {
+    if (!file) return;
+
+    const request = user?.documentRequests?.find((r) => r.id === requestId);
+    if (!request) return;
+
+    const fileKey = `${requestId}-${requirementName}`;
+    setSubmittingOnboardingKey(fileKey);
+
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (err) => reject(err);
+      });
+
+      const updatedAnswers = (request.answers as any[]).map((ans) => {
+        if (ans.name === requirementName) {
+          return { ...ans, value: base64 };
+        }
+        return ans;
+      });
+
+      const res = await fetch(`/api/onboarding/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: updatedAnswers }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message);
+
+      // Update local state
+      setUser((prev) => {
+        if (!prev) return null;
+        const updatedRequests = (prev.documentRequests || []).map((r) => {
+          if (r.id === requestId) {
+            return { ...r, answers: result.data.answers };
+          }
+          return r;
+        });
+        return { ...prev, documentRequests: updatedRequests };
+      });
+    } catch (err) {
+      alert("Erro ao enviar arquivo.");
+    } finally {
+      setSubmittingOnboardingKey(null);
+    }
+  };
+
+  const handleOnboardingClearAnswer = async (requestId: string, requirementName: string) => {
+    if (!window.confirm("Deseja realmente remover o arquivo ou resposta enviada?")) return;
+
+    const request = user?.documentRequests?.find((r) => r.id === requestId);
+    if (!request) return;
+
+    const fileKey = `${requestId}-${requirementName}`;
+    setSubmittingOnboardingKey(fileKey);
+
+    try {
+      const updatedAnswers = (request.answers as any[]).map((ans) => {
+        if (ans.name === requirementName) {
+          return { ...ans, value: null };
+        }
+        return ans;
+      });
+
+      const res = await fetch(`/api/onboarding/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: updatedAnswers }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message);
+
+      // Update local state
+      setUser((prev) => {
+        if (!prev) return null;
+        const updatedRequests = (prev.documentRequests || []).map((r) => {
+          if (r.id === requestId) {
+            return { ...r, answers: result.data.answers };
+          }
+          return r;
+        });
+        return { ...prev, documentRequests: updatedRequests };
+      });
+
+      // Clear local input text if any
+      setTextAnswers((prev) => {
+        const next = { ...prev };
+        delete next[fileKey];
+        return next;
+      });
+    } catch (err) {
+      alert("Erro ao limpar resposta.");
+    } finally {
+      setSubmittingOnboardingKey(null);
     }
   };
 
@@ -906,6 +1125,218 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
+
+      {/* Seção: Documentos Requeridos (Onboarding) */}
+      {user.documentRequests && user.documentRequests.length > 0 && (
+        <div className="w-full bg-white rounded-3xl shadow-xl border border-stone-100/50 p-8 mt-4 animate-fade-in space-y-6">
+          <h3 className="text-md font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2 mb-6 border-b border-stone-100 pb-3">
+            <CheckCircle2 className="text-emerald-500" size={20} />
+            Checklist de Integração / Onboarding
+          </h3>
+
+          <div className="space-y-6">
+            {user.documentRequests.map((req: any) => {
+              // Calculate completion progress for this request
+              const total = req.requirements.length;
+              const completed = req.answers.filter((ans: any) => ans.value !== null && ans.value !== "").length;
+              const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+              return (
+                <div key={req.id} className="border border-stone-150 rounded-2xl p-6 bg-stone-50/20 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <span className="text-xs font-bold text-stone-400 flex items-center gap-1.5 uppercase tracking-wider">
+                      <Calendar size={14} />
+                      Solicitado em {formatDateString(req.createdAt)}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-stone-700">{percentage}% Completo</span>
+                      <div className="w-24 bg-stone-200 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {req.answers.map((ans: any) => {
+                      const hasValue = ans.value !== null && ans.value !== "";
+                      const keyStr = `${req.id}-${ans.name}`;
+                      const isSubmitting = submittingOnboardingKey === keyStr;
+
+                      return (
+                        <div
+                          key={ans.name}
+                          className="bg-white border border-stone-100 p-4 rounded-xl flex flex-col justify-between min-h-[140px] shadow-sm relative group"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-black text-stone-750 truncate max-w-[150px] block">
+                                {ans.name}
+                              </span>
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 uppercase">
+                                {ans.type === "file" ? "Arquivo" : "Texto"}
+                              </span>
+                            </div>
+
+                            <div className="mt-3.5 space-y-1.5">
+                              {hasValue ? (
+                                <>
+                                  {ans.type === "file" ? (
+                                    <div className="text-xs text-stone-600 font-semibold flex items-center gap-1.5">
+                                      <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                                      Arquivo enviado
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-stone-600 bg-stone-50 p-2.5 rounded-lg border border-stone-150 font-medium break-all line-clamp-3">
+                                      {ans.value}
+                                    </p>
+                                  )}
+
+                                  {/* Status Badges */}
+                                  <div className="flex flex-col gap-1 mt-1">
+                                    {ans.status === "approved" ? (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 px-2 py-0.5 rounded-full w-fit">
+                                        <CheckCircle2 size={11} />
+                                        Aprovado
+                                      </span>
+                                    ) : ans.status === "rejected" ? (
+                                      <>
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-650 bg-red-50 border border-red-200/60 px-2 py-0.5 rounded-full w-fit">
+                                          <AlertCircle size={11} />
+                                          Recusado
+                                        </span>
+                                        {ans.feedback && (
+                                          <p className="text-[10px] text-red-500 italic mt-0.5 leading-tight">
+                                            Motivo: {ans.feedback}
+                                          </p>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full w-fit animate-pulse">
+                                        <Loader2 size={11} className="animate-spin" />
+                                        Aguardando análise
+                                      </span>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="space-y-2">
+                                  {ans.type === "file" ? (
+                                    <label className="flex items-center justify-center gap-2 border border-dashed border-stone-300 hover:border-blue-500 bg-stone-50/50 hover:bg-stone-50 py-2.5 px-3 rounded-lg cursor-pointer text-xs font-bold text-stone-500 hover:text-blue-500 transition-all">
+                                      {isSubmitting ? (
+                                        <Loader2 size={14} className="animate-spin text-blue-500" />
+                                      ) : (
+                                        <Upload size={14} />
+                                      )}
+                                      <span>Enviar arquivo</span>
+                                      <input
+                                        type="file"
+                                        accept="image/*,.pdf"
+                                        disabled={isSubmitting}
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) handleOnboardingUploadFile(req.id, ans.name, file);
+                                        }}
+                                        className="hidden"
+                                      />
+                                    </label>
+                                  ) : (
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        placeholder="Digite aqui..."
+                                        disabled={isSubmitting}
+                                        value={textAnswers[keyStr] || ""}
+                                        onChange={(e) =>
+                                          setTextAnswers((prev) => ({
+                                            ...prev,
+                                            [keyStr]: e.target.value,
+                                          }))
+                                        }
+                                        className="flex-1 bg-stone-50 border border-stone-300 rounded-lg p-2 text-xs focus:outline-none text-stone-700 font-medium"
+                                      />
+                                      <button
+                                        type="button"
+                                        disabled={isSubmitting || !textAnswers[keyStr]?.trim()}
+                                        onClick={() => handleOnboardingSubmitText(req.id, ans.name)}
+                                        className="bg-blue-500 hover:bg-blue-600 disabled:bg-stone-300 text-white p-2 rounded-lg transition-colors flex items-center justify-center cursor-pointer shrink-0"
+                                      >
+                                        {isSubmitting ? (
+                                          <Loader2 size={13} className="animate-spin" />
+                                        ) : (
+                                          <Check size={13} />
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {hasValue && (
+                            <div className="flex gap-2 items-center mt-4 border-t border-stone-50 pt-3">
+                              {ans.type === "file" && ans.value && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={loadingFileKey !== null}
+                                    onClick={() => handlePreviewOnboardingFile(req.id, ans.name, ans.value)}
+                                    className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                                    title="Visualizar Arquivo"
+                                  >
+                                    {loadingFileKey === `${req.id}-${ans.name}` ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Eye size={14} />
+                                    )}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    disabled={loadingFileKey !== null}
+                                    onClick={() => handleDownloadOnboardingFile(req.id, ans.name, ans.value)}
+                                    className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                                    title="Baixar Arquivo"
+                                  >
+                                    {loadingFileKey === `${req.id}-${ans.name}` ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Download size={14} />
+                                    )}
+                                  </button>
+                                </>
+                              )}
+
+                              {ans.status !== "approved" && (
+                                <button
+                                  type="button"
+                                  disabled={isSubmitting}
+                                  onClick={() => handleOnboardingClearAnswer(req.id, ans.name)}
+                                  className="bg-red-50 hover:bg-red-100 text-red-500 border border-red-100 p-2 rounded-lg transition-colors flex items-center justify-center cursor-pointer ml-auto"
+                                  title="Remover Resposta / Re-enviar"
+                                >
+                                  {isSubmitting ? (
+                                    <Loader2 size={13} className="animate-spin" />
+                                  ) : (
+                                    <Trash2 size={13} />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Seção: Minhas Férias */}
       <div className="w-full bg-white rounded-3xl shadow-xl border border-stone-100/50 p-8 mt-4 animate-fade-in">

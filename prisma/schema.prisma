@@ -49,6 +49,7 @@ model User {
   approvedVacations  Vacation[]          @relation("ApprovedVacations")
   workSchedules      WorkSchedule[]      @relation("UserWorkSchedules")
   timeRecords        TimeRecord[]
+  documentRequests   DocumentRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -214,4 +215,43 @@ model TimeRecordPause {
   createdAt       DateTime      @default(now()) @map("created_at")
 
   @@map("time_record_pauses")
+}
+
+// 11. REQUISIÇÕES DE DOCUMENTOS (ONBOARDING)
+model DocumentRequest {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requirements Json     // Array of: { name: string, type: "file" | "text" }
+  answers      Json?    // Array of: { name: string, type: "file" | "text", value?: string }
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("document_requests")
+}
+
+// 12. PASTAS DE DOCUMENTOS GERAIS
+model Folder {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  documents Document[]
+
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@map("folders")
+}
+
+// 13. DOCUMENTOS GERAIS
+model Document {
+  id        String   @id @default(uuid())
+  name      String
+  value     String   // Base64 file contents
+  folderId  String   @map("folder_id")
+  folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("documents")
 }

@@ -193,3 +193,54 @@ export async function sendRefusedForCorrectionEmail(
     throw error;
   }
 }
+
+export async function sendOnboardingDocumentRejectedEmail(
+  email: string,
+  name: string,
+  documentName: string,
+  feedback: string | null,
+  profileLink: string,
+) {
+  try {
+    console.log(`[Mail Resend] Enviando recusa de documento de onboarding para: ${email}`);
+    if (!validateEnv()) {
+      throw new Error("RESEND_API_KEY ausente no ambiente.");
+    }
+
+    const { data, error } = await resend.emails.send({
+      from: getFromAddress(),
+      to: email,
+      subject: `Ajuste necessário: Documento recusado (${documentName}) - ConectaRH`,
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 20px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <span style="font-size: 24px; font-weight: 800; color: #3b82f6; letter-spacing: 0.5px;">Conecta<span style="color: #1d4ed8;">RH</span></span>
+          </div>
+          <h1 style="color: #1e293b; font-size: 22px; font-weight: 700; margin-bottom: 16px; text-align: center;">Olá, ${name}!</h1>
+          <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 20px; text-align: center;">Durante a auditoria de documentos de onboarding pela nossa equipe de Recursos Humanos, identificamos que o documento <strong>"${documentName}"</strong> precisa de ajustes.</p>
+          
+          ${feedback ? `
+          <div style="background-color: #fffbeb; border-left: 4px solid #ef4444; padding: 18px; margin: 24px 0; border-radius: 12px;">
+            <h3 style="color: #991b1b; margin: 0 0 8px 0; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Motivo apontado pelo RH:</h3>
+            <p style="color: #7f1d1d; margin: 0; font-size: 14px; line-height: 1.6; white-space: pre-line; font-weight: 600;">${feedback}</p>
+          </div>
+          ` : ""}
+
+          <p style="color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 24px; text-align: center;">Por favor, acesse seu perfil para fazer o envio correto do documento solicitado.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${profileLink}" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); transition: all 0.2s;">Enviar Novo Documento</a>
+          </div>
+          <p style="color: #64748b; font-size: 12px; line-height: 1.5; margin-top: 32px; border-t: 1px solid #f1f5f9; padding-top: 20px; text-align: center;">Este é um e-mail automático. Por favor, regularize sua situação o quanto antes.</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      throw new Error(`Erro do Resend: ${error.message} (${error.name})`);
+    }
+
+    console.log("[Mail Resend] E-mail de recusa de documento enviado com sucesso. ID:", data?.id);
+  } catch (error) {
+    console.error("Erro ao enviar email de recusa de documento:", error);
+  }
+}

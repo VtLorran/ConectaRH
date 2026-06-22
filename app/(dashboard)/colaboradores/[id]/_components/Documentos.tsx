@@ -22,12 +22,16 @@ interface DocumentosProps {
   collaboratorId: string;
   formData: Record<string, unknown> | null;
   onUpdate: (updatedData: Record<string, unknown>) => void;
+  documentRequests?: any[];
+  onUpdateDocumentRequests?: (updatedRequests: any[]) => void;
 }
 
 export default function Documentos({
   collaboratorId,
   formData,
   onUpdate,
+  documentRequests = [],
+  onUpdateDocumentRequests,
 }: DocumentosProps) {
   // Lightbox / Preview States
   const [activePdfBase64, setActivePdfBase64] = useState<string | null>(null);
@@ -63,6 +67,14 @@ export default function Documentos({
   const documents = Object.entries(formData || {}).filter(
     ([, value]) => isBase64Pdf(value) || isBase64Image(value)
   ) as [string, string][];
+
+  const onboardingDocs = (documentRequests || []).flatMap((req) =>
+    (req.answers || []).map((ans: any) => ({
+      requestId: req.id,
+      reqAnswers: req.answers,
+      ans,
+    }))
+  );
 
   const fetchFullFile = async (key: string): Promise<string> => {
     const res = await fetch(`/api/colaboradores/${collaboratorId}/documento?key=${encodeURIComponent(key)}`);
@@ -137,6 +149,112 @@ export default function Documentos({
     const extension = isBase64Pdf(dataToDownload) ? "pdf" : "png";
     link.download = `${fieldName}.${extension}`;
     link.click();
+  };
+
+  // Onboarding documents helper functions
+  const fetchFullOnboardingFile = async (requestId: string, name: string): Promise<string> => {
+    const res = await fetch(`/api/onboarding/${requestId}/documento?name=${encodeURIComponent(name)}`);
+    if (!res.ok) {
+      throw new Error("Erro ao buscar o arquivo completo no servidor.");
+    }
+    const data = await res.json();
+    return data.fileData;
+  };
+
+  const handlePreviewOnboardingFile = async (requestId: string, name: string, fileData: string) => {
+    if (!fileData) return;
+    let dataToPreview = fileData;
+    const fileKey = `${requestId}-${name}`;
+    if (fileData.endsWith("PLACEHOLDER")) {
+      setLoadingFileKey(fileKey);
+      try {
+        dataToPreview = await fetchFullOnboardingFile(requestId, name);
+      } catch (err) {
+        console.error(err);
+        alert("Não foi possível carregar o arquivo.");
+        setLoadingFileKey(null);
+        return;
+      }
+      setLoadingFileKey(null);
+    }
+
+    if (isBase64Pdf(dataToPreview)) {
+      setActivePdfBase64(dataToPreview);
+      setActivePdfName(name);
+    } else if (isBase64Image(dataToPreview)) {
+      setActiveImageBase64(dataToPreview);
+      setActiveImageName(name);
+    }
+  };
+
+  const handleDownloadOnboardingFile = async (requestId: string, name: string, fileData: string) => {
+    let dataToDownload = fileData;
+    const fileKey = `${requestId}-${name}`;
+    if (fileData.endsWith("PLACEHOLDER")) {
+      setLoadingFileKey(fileKey);
+      try {
+        dataToDownload = await fetchFullOnboardingFile(requestId, name);
+      } catch (err) {
+        console.error(err);
+        alert("Não foi possível carregar o arquivo.");
+        setLoadingFileKey(null);
+        return;
+      }
+      setLoadingFileKey(null);
+    }
+
+    const link = document.createElement("a");
+    link.href = dataToDownload;
+    const extension = isBase64Pdf(dataToDownload) ? "pdf" : "png";
+    link.download = `${name}.${extension}`;
+    link.click();
+  };
+
+  const handleReviewAnswer = async (
+    requestId: string,
+    reqAnswers: any[],
+    answerName: string,
+    action: "approved" | "rejected",
+    feedbackText: string | null = null
+  ) => {
+    const updatedAnswers = reqAnswers.map((ans) => {
+      if (ans.name === answerName) {
+        return {
+          ...ans,
+          status: action,
+          feedback: feedbackText,
+        };
+      }
+      return ans;
+    });
+
+    try {
+      const res = await fetch(`/api/onboarding/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: updatedAnswers }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Erro ao atualizar status do documento");
+      }
+
+      if (onUpdateDocumentRequests) {
+        const updatedRequests = documentRequests.map((r) => {
+          if (r.id === requestId) {
+            return {
+              ...r,
+              answers: updatedAnswers,
+            };
+          }
+          return r;
+        });
+        onUpdateDocumentRequests(updatedRequests);
+      }
+    } catch (err: any) {
+      alert(err.message || "Erro ao atualizar status.");
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,159 +375,323 @@ export default function Documentos({
   };
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-stone-100 pb-3">
-        <h3 className="text-md font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2">
-          <FileText className="text-blue-500" size={20} />
-          Documentos
-        </h3>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-        >
-          <Plus size={16} />
-          Adicionar Documento
-        </button>
+    <div className="w-full space-y-8 animate-fade-in">
+      {/* Admission Documents Section */}
+      <div className="w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-stone-100 pb-3">
+          <h3 className="text-md font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2">
+            <FileText className="text-blue-500" size={20} />
+            Documentos Admissionais
+          </h3>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus size={16} />
+            Adicionar Documento
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {documents.map(([key, value]) => {
+            const isPdf = isBase64Pdf(value);
+            const isImage = isBase64Image(value);
+            const fieldName = key.split(":")[0];
+
+            if (isPdf) {
+              return (
+                <div
+                  key={key}
+                  className="flex flex-col justify-between gap-4 bg-stone-50/50 p-5 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[160px]"
+                >
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                      {formatFieldName(key)}
+                    </span>
+                    <span className="text-xs text-stone-500 italic mt-1.5 flex items-center gap-1.5">
+                      <FileText size={14} className="text-red-500 shrink-0" />
+                      Documento PDF enviado
+                    </span>
+                  </div>
+                  <div className="flex gap-2 items-center mt-auto">
+                    <button
+                      type="button"
+                      disabled={loadingFileKey !== null}
+                      onClick={() => handlePreviewFile(key, value)}
+                      className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                      title="Visualizar PDF"
+                    >
+                      {loadingFileKey === key ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Eye size={16} />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={loadingFileKey !== null}
+                      onClick={() => handleDownloadFile(key, value, fieldName)}
+                      className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                      title="Instalar / Baixar PDF"
+                    >
+                      {loadingFileKey === key ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download size={16} />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={loadingFileKey !== null}
+                      onClick={() => handleDeleteDocument(key)}
+                      className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                      title="Excluir Documento"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            if (isImage) {
+              return (
+                <div
+                  key={key}
+                  className="flex flex-col justify-between gap-4 bg-stone-50/50 p-5 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[160px]"
+                >
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                      {formatFieldName(key)}
+                    </span>
+                    <span className="text-xs text-stone-500 italic mt-1.5 flex items-center gap-1.5">
+                      <ImageIcon size={14} className="text-emerald-500 shrink-0" />
+                      Imagem / Foto enviada
+                    </span>
+                  </div>
+                  <div className="flex gap-2 items-center mt-auto">
+                    <button
+                      type="button"
+                      disabled={loadingFileKey !== null}
+                      onClick={() => handlePreviewFile(key, value)}
+                      className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                      title="Visualizar Foto"
+                    >
+                      {loadingFileKey === key ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Eye size={16} />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={loadingFileKey !== null}
+                      onClick={() => handleDownloadFile(key, value, fieldName)}
+                      className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                      title="Instalar / Baixar Foto"
+                    >
+                      {loadingFileKey === key ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download size={16} />
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={loadingFileKey !== null}
+                      onClick={() => handleDeleteDocument(key)}
+                      className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                      title="Excluir Documento"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })}
+
+          {/* Empty State */}
+          {documents.length === 0 && (
+            <div className="col-span-full py-12 flex flex-col items-center justify-center text-center gap-2 bg-stone-50/50 rounded-2xl border border-stone-100">
+              <FileText size={40} className="text-stone-300" />
+              <p className="text-stone-500 font-semibold text-sm">
+                Nenhum documento de admissão disponível
+              </p>
+              <p className="text-stone-400 text-xs max-w-xs">
+                Adicione novos documentos clicando no botão &quot;Adicionar Documento&quot; acima.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {/* Existing Documents */}
-        {documents.map(([key, value]) => {
-          const isPdf = isBase64Pdf(value);
-          const isImage = isBase64Image(value);
-          const fieldName = key.split(":")[0];
+      {/* Onboarding Documents Section */}
+      <div className="w-full pt-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-stone-100 pb-3">
+          <h3 className="text-md font-bold text-stone-700 uppercase tracking-wider flex items-center gap-2">
+            <CheckCircle2 className="text-emerald-500" size={20} />
+            Documentos Requeridos (Onboarding)
+          </h3>
+        </div>
 
-          if (isPdf) {
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {onboardingDocs.map(({ requestId, reqAnswers, ans }) => {
+            const isPdf = isBase64Pdf(ans.value);
+            const isImage = isBase64Image(ans.value);
+            const hasValue = ans.value !== null && ans.value !== "";
+
             return (
               <div
-                key={key}
+                key={`${requestId}-${ans.name}`}
                 className="flex flex-col justify-between gap-4 bg-stone-50/50 p-5 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[160px]"
               >
                 <div className="flex flex-col gap-1 min-w-0">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                    {formatFieldName(key)}
-                  </span>
-                  <span className="text-xs text-stone-500 italic mt-1.5 flex items-center gap-1.5">
-                    <FileText size={14} className="text-red-500 shrink-0" />
-                    Documento PDF enviado
-                  </span>
-                </div>
-                <div className="flex gap-2 items-center mt-auto">
-                  <button
-                    type="button"
-                    disabled={loadingFileKey !== null}
-                    onClick={() => handlePreviewFile(key, value)}
-                    className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
-                    title="Visualizar PDF"
-                  >
-                    {loadingFileKey === key ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Eye size={16} />
-                    )}
-                  </button>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider truncate">
+                      {ans.name}
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 uppercase shrink-0">
+                      {ans.type === "file" ? "Arquivo" : "Texto"}
+                    </span>
+                  </div>
 
-                  <button
-                    type="button"
-                    disabled={loadingFileKey !== null}
-                    onClick={() => handleDownloadFile(key, value, fieldName)}
-                    className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
-                    title="Instalar / Baixar PDF"
-                  >
-                    {loadingFileKey === key ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download size={16} />
-                    )}
-                  </button>
+                  <div className="mt-2.5 space-y-1.5">
+                    {hasValue ? (
+                      <>
+                        {ans.type === "file" ? (
+                          <span className="text-xs text-stone-600 font-semibold flex items-center gap-1.5">
+                            <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                            Arquivo enviado
+                          </span>
+                        ) : (
+                          <p className="text-xs text-stone-600 bg-white p-2 rounded-lg border border-stone-150 font-medium line-clamp-3">
+                            {ans.value}
+                          </p>
+                        )}
 
-                  <button
-                    type="button"
-                    disabled={loadingFileKey !== null}
-                    onClick={() => handleDeleteDocument(key)}
-                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
-                    title="Excluir Documento"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                        {/* Status Badges */}
+                        <div className="flex flex-col gap-1 mt-1">
+                          {ans.status === "approved" ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 px-2 py-0.5 rounded-full w-fit">
+                              <CheckCircle2 size={11} />
+                              Aprovado
+                            </span>
+                          ) : ans.status === "rejected" ? (
+                            <>
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-650 bg-red-50 border border-red-200/60 px-2 py-0.5 rounded-full w-fit">
+                                <AlertCircle size={11} />
+                                Recusado
+                              </span>
+                              {ans.feedback && (
+                                <p className="text-[10px] text-red-500 italic mt-0.5 leading-tight">
+                                  Motivo: {ans.feedback}
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full w-fit animate-pulse">
+                              <Loader2 size={11} className="animate-spin" />
+                              Pendente revisão
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-xs text-amber-600 font-semibold flex items-center gap-1.5 animate-pulse">
+                        <AlertCircle size={14} className="shrink-0" />
+                        Aguardando envio
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {hasValue && (
+                  <div className="flex gap-2 items-center mt-auto border-t border-stone-50 pt-3">
+                    {ans.type === "file" && ans.value && (
+                      <>
+                        <button
+                          type="button"
+                          disabled={loadingFileKey !== null}
+                          onClick={() => handlePreviewOnboardingFile(requestId, ans.name, ans.value)}
+                          className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                          title="Visualizar Arquivo"
+                        >
+                          {loadingFileKey === `${requestId}-${ans.name}` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={loadingFileKey !== null}
+                          onClick={() => handleDownloadOnboardingFile(requestId, ans.name, ans.value)}
+                          className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
+                          title="Instalar / Baixar Arquivo"
+                        >
+                          {loadingFileKey === `${requestId}-${ans.name}` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download size={16} />
+                          )}
+                        </button>
+                      </>
+                    )}
+
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      {ans.status !== "approved" && (
+                        <button
+                          type="button"
+                          onClick={() => handleReviewAnswer(requestId, reqAnswers, ans.name, "approved")}
+                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200/60 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                          title="Aprovar"
+                        >
+                          <CheckCircle2 size={14} />
+                        </button>
+                      )}
+
+                      {ans.status !== "rejected" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const reason = window.prompt("Motivo da reprovação / correção do documento:");
+                            if (reason !== null) {
+                              handleReviewAnswer(requestId, reqAnswers, ans.name, "rejected", reason);
+                            }
+                          }}
+                          className="bg-red-50 hover:bg-red-100 text-red-650 border border-red-200/60 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
+                          title="Recusar com Justificativa"
+                        >
+                          <AlertCircle size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
-          }
+          })}
 
-          if (isImage) {
-            return (
-              <div
-                key={key}
-                className="flex flex-col justify-between gap-4 bg-stone-50/50 p-5 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-all shadow-sm min-h-[160px]"
-              >
-                <div className="flex flex-col gap-1 min-w-0">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                    {formatFieldName(key)}
-                  </span>
-                  <span className="text-xs text-stone-500 italic mt-1.5 flex items-center gap-1.5">
-                    <ImageIcon size={14} className="text-emerald-500 shrink-0" />
-                    Imagem / Foto enviada
-                  </span>
-                </div>
-                <div className="flex gap-2 items-center mt-auto">
-                  <button
-                    type="button"
-                    disabled={loadingFileKey !== null}
-                    onClick={() => handlePreviewFile(key, value)}
-                    className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
-                    title="Visualizar Foto"
-                  >
-                    {loadingFileKey === key ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Eye size={16} />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={loadingFileKey !== null}
-                    onClick={() => handleDownloadFile(key, value, fieldName)}
-                    className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
-                    title="Instalar / Baixar Foto"
-                  >
-                    {loadingFileKey === key ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download size={16} />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={loadingFileKey !== null}
-                    onClick={() => handleDeleteDocument(key)}
-                    className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 p-2.5 rounded-xl font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
-                    title="Excluir Documento"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
-          return null;
-        })}
-
-        {/* Empty State */}
-        {documents.length === 0 && (
-          <div className="col-span-full py-12 flex flex-col items-center justify-center text-center gap-2 bg-stone-50/50 rounded-2xl border border-stone-100">
-            <FileText size={40} className="text-stone-300" />
-            <p className="text-stone-500 font-semibold text-sm">
-              Nenhum documento de admissão disponível
-            </p>
-            <p className="text-stone-400 text-xs max-w-xs">
-              Adicione novos documentos clicando no botão &quot;Adicionar Documento&quot; acima.
-            </p>
-          </div>
-        )}
+          {onboardingDocs.length === 0 && (
+            <div className="col-span-full py-12 flex flex-col items-center justify-center text-center gap-2 bg-stone-50/50 rounded-2xl border border-stone-100">
+              <FileText size={40} className="text-stone-300" />
+              <p className="text-stone-500 font-semibold text-sm">
+                Nenhum documento ou informação de onboarding requerido
+              </p>
+              <p className="text-stone-400 text-xs max-w-xs">
+                Solicitações feitas na aba Onboarding serão mostradas aqui conforme forem enviadas pelo colaborador.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal de Inserir Novo Documento */}

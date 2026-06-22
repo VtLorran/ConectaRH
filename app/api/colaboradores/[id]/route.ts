@@ -26,6 +26,27 @@ function cleanFormData(formData: any) {
   return cleaned;
 }
 
+function cleanAnswers(answers: any) {
+  if (!answers || !Array.isArray(answers)) return answers;
+  return answers.map((ans: any) => {
+    let cleanedValue = ans.value;
+    if (typeof ans.value === "string") {
+      if (ans.value.startsWith("data:application/pdf;base64,")) {
+        cleanedValue = "data:application/pdf;base64,PLACEHOLDER";
+      } else if (ans.value.startsWith("data:image/")) {
+        const match = ans.value.match(/^(data:image\/[a-zA-Z+.-]+;base64,)/);
+        if (match) {
+          cleanedValue = `${match[1]}PLACEHOLDER`;
+        }
+      }
+    }
+    return {
+      ...ans,
+      value: cleanedValue
+    };
+  });
+}
+
 
 export async function GET(
   request: Request,
@@ -55,6 +76,18 @@ export async function GET(
                 name: true,
               },
             },
+          },
+        },
+        documentRequests: {
+          select: {
+            id: true,
+            requirements: true,
+            answers: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: {
+            createdAt: "desc",
           },
         },
       },
@@ -122,6 +155,10 @@ export async function GET(
       jobPosition: userData.jobPosition,
       formData: cleanFormData(admissionData?.formData),
       createdAt: userData.createdAt,
+      documentRequests: userData.documentRequests.map((req) => ({
+        ...req,
+        answers: cleanAnswers(req.answers),
+      })),
     };
 
     return NextResponse.json(responseData, { status: 200 });
