@@ -43,6 +43,7 @@ interface Collaborator {
   email: string;
   cpf: string;
   avatar: string | null;
+  role: string;
   jobPosition?: {
     name: string;
     department?: {
@@ -78,7 +79,7 @@ export default function PontoPage() {
   const [activeTab, setActiveTab] = useState<"geral" | "setor">("geral");
   const [selectedSectorId, setSelectedSectorId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Data states
   const [timeRecords, setTimeRecords] = useState<TimeRecord[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
@@ -105,7 +106,7 @@ export default function PontoPage() {
   const [scannerInstance, setScannerInstance] = useState<any>(null);
   const [scannerError, setScannerError] = useState("");
   const [scannedQrToken, setScannedQrToken] = useState("");
-  
+
   // Collaborator Point Registration Modal
   const [showConfirmRecordModal, setShowConfirmRecordModal] = useState(false);
   const [recordType, setRecordType] = useState<string>("entry");
@@ -162,10 +163,11 @@ export default function PontoPage() {
           setPauseCategories(catData.data);
         }
       }
-
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro desconhecido";
       console.error(err);
-      setError(err.message || "Erro ao carregar dados.");
+      setError(errorMessage || "Erro ao carregar dados.");
     } finally {
       setLoading(false);
     }
@@ -205,7 +207,9 @@ export default function PontoPage() {
     }, 1000);
 
     const generateNewQR = () => {
-      const randToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const randToken =
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
       const payload = {
         type: "kiosk-ponto",
         timestamp: Date.now(),
@@ -244,34 +248,45 @@ export default function PontoPage() {
           const html5QrCode = new (window as any).Html5Qrcode("qr-reader");
           setScannerInstance(html5QrCode);
 
-          html5QrCode.start(
-            { facingMode: "environment" },
-            {
-              fps: 10,
-              qrbox: { width: 250, height: 250 }
-            },
-            (decodedText: string) => {
-              // Successfully read QR Code!
-              setScannedQrToken(decodedText);
+          html5QrCode
+            .start(
+              { facingMode: "environment" },
+              {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+              },
+              (decodedText: string) => {
+                // Successfully read QR Code!
+                setScannedQrToken(decodedText);
 
-              // Stop scanner immediately
-              html5QrCode.stop().then(() => {
-                setScanning(false);
-                setScannerInstance(null);
-                
-                // Show registration modal and default options
-                setShowConfirmRecordModal(true);
-              }).catch((err: any) => console.error("Erro ao parar scanner:", err));
-            },
-            (errorMessage: string) => {
-              // Verbose scan errors, safe to ignore
-            }
-          ).catch((err: any) => {
-            console.error("Erro ao iniciar câmera:", err);
-            setScannerError("Permissão de câmera negada ou nenhuma câmera encontrada.");
-          });
+                // Stop scanner immediately
+                html5QrCode
+                  .stop()
+                  .then(() => {
+                    setScanning(false);
+                    setScannerInstance(null);
+
+                    // Show registration modal and default options
+                    setShowConfirmRecordModal(true);
+                  })
+                  .catch((err: unknown) =>
+                    console.error("Erro ao parar scanner:", err),
+                  );
+              },
+              (errorMessage: string) => {
+                // Verbose scan errors, safe to ignore
+              },
+            )
+            .catch((err: unknown) => {
+              console.error("Erro ao iniciar câmera:", err);
+              setScannerError(
+                "Permissão de câmera negada ou nenhuma câmera encontrada.",
+              );
+            });
         } else {
-          setScannerError("Carregando o leitor de QR Code, por favor tente novamente em segundos.");
+          setScannerError(
+            "Carregando o leitor de QR Code, por favor tente novamente em segundos.",
+          );
         }
       } catch (err) {
         console.error(err);
@@ -282,14 +297,17 @@ export default function PontoPage() {
 
   const stopScanner = () => {
     if (scannerInstance) {
-      scannerInstance.stop().then(() => {
-        setScanning(false);
-        setScannerInstance(null);
-      }).catch((err: any) => {
-        console.error("Erro ao parar câmera:", err);
-        setScanning(false);
-        setScannerInstance(null);
-      });
+      scannerInstance
+        .stop()
+        .then(() => {
+          setScanning(false);
+          setScannerInstance(null);
+        })
+        .catch((err: unknown) => {
+          console.error("Erro ao parar câmera:", err);
+          setScanning(false);
+          setScannerInstance(null);
+        });
     } else {
       setScanning(false);
     }
@@ -298,7 +316,7 @@ export default function PontoPage() {
   // Dynamic selector options based on today's state
   const getRecordTypeOptions = () => {
     const todayStr = new Date().toISOString().split("T")[0];
-    const todayRecord = timeRecords.find(r => r.date.startsWith(todayStr));
+    const todayRecord = timeRecords.find((r) => r.date.startsWith(todayStr));
 
     const options: { value: string; label: string }[] = [];
 
@@ -311,13 +329,19 @@ export default function PontoPage() {
         // Add pause options (Start / End depending on whether there's an open pause)
         pauseCategories.forEach((cat) => {
           const isActive = todayRecord.pauses?.some(
-            p => p.pauseCategoryId === cat.id && !p.endTime
+            (p) => p.pauseCategoryId === cat.id && !p.endTime,
           );
 
           if (isActive) {
-            options.push({ value: `pause_${cat.id}`, label: `Finalizar Pausa: ${cat.name}` });
+            options.push({
+              value: `pause_${cat.id}`,
+              label: `Finalizar Pausa: ${cat.name}`,
+            });
           } else {
-            options.push({ value: `pause_${cat.id}`, label: `Iniciar Pausa: ${cat.name}` });
+            options.push({
+              value: `pause_${cat.id}`,
+              label: `Iniciar Pausa: ${cat.name}`,
+            });
           }
         });
       }
@@ -344,7 +368,9 @@ export default function PontoPage() {
 
     try {
       const typeParam = recordType.startsWith("pause_") ? "pause" : recordType;
-      const pauseCategoryId = recordType.startsWith("pause_") ? recordType.replace("pause_", "") : undefined;
+      const pauseCategoryId = recordType.startsWith("pause_")
+        ? recordType.replace("pause_", "")
+        : undefined;
 
       const res = await fetch("/api/ponto/registro", {
         method: "POST",
@@ -362,16 +388,17 @@ export default function PontoPage() {
       }
 
       setRegisterSuccess(result.message || "Ponto registrado com sucesso!");
-      
+
       // Refresh logs after 1.5 seconds and close modal
       setTimeout(() => {
         setShowConfirmRecordModal(false);
         setRegisterSuccess("");
         fetchData();
       }, 1500);
-
-    } catch (err: any) {
-      setRegisterError(err.message || "Erro ao registrar ponto.");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro ao registrar ponto.";
+      setRegisterError(errorMessage);
     } finally {
       setRegisteringPoint(false);
     }
@@ -397,13 +424,18 @@ export default function PontoPage() {
 
       // Successful login - persist for 7 days
       const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
-      localStorage.setItem("ponto_kiosk_expires", (Date.now() + sevenDaysInMs).toString());
-      
+      localStorage.setItem(
+        "ponto_kiosk_expires",
+        (Date.now() + sevenDaysInMs).toString(),
+      );
+
       setAdminPassword("");
       setShowEnterAuthModal(false);
       setIsKioskMode(true);
-    } catch (err: any) {
-      setAuthError(err.message || "Erro na verificação da senha.");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro na verificação da senha.";
+      setAuthError(errorMessage);
     } finally {
       setAuthSubmitting(false);
     }
@@ -432,11 +464,13 @@ export default function PontoPage() {
       setAdminPassword("");
       setShowExitAuthModal(false);
       setIsKioskMode(false);
-      
+
       // Refresh logs
       fetchData();
-    } catch (err: any) {
-      setAuthError(err.message || "Erro na verificação da senha.");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro na verificação da senha.";
+      setAuthError(errorMessage);
     } finally {
       setAuthSubmitting(false);
     }
@@ -446,7 +480,10 @@ export default function PontoPage() {
   const formatTime = (isoString: string | null) => {
     if (!isoString) return "--:--";
     const date = new Date(isoString);
-    return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatDate = (isoString: string) => {
@@ -474,7 +511,9 @@ export default function PontoPage() {
       // Tab filter
       if (activeTab === "setor" && selectedSectorId) {
         const userDeptId = record.user.jobPosition?.department?.name;
-        const targetDeptName = sectors.find((s) => s.id === selectedSectorId)?.name;
+        const targetDeptName = sectors.find(
+          (s) => s.id === selectedSectorId,
+        )?.name;
         if (userDeptId !== targetDeptName) return false;
       }
 
@@ -482,9 +521,16 @@ export default function PontoPage() {
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const nameMatch = record.user.name.toLowerCase().includes(query);
-        const cpfMatch = record.user.cpf.replace(/\D/g, "").includes(query.replace(/\D/g, ""));
-        const sectorMatch = record.user.jobPosition?.department?.name.toLowerCase().includes(query) || false;
-        const positionMatch = record.user.jobPosition?.name.toLowerCase().includes(query) || false;
+        const cpfMatch = record.user.cpf
+          .replace(/\D/g, "")
+          .includes(query.replace(/\D/g, ""));
+        const sectorMatch =
+          record.user.jobPosition?.department?.name
+            ?.toLowerCase()
+            ?.includes(query) || false;
+        const positionMatch =
+          record.user.jobPosition?.name?.toLowerCase()?.includes(query) ||
+          false;
         return nameMatch || cpfMatch || sectorMatch || positionMatch;
       }
 
@@ -499,7 +545,9 @@ export default function PontoPage() {
     return (
       <div className="py-16 flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
-        <p className="text-stone-500 font-semibold text-xs animate-pulse">Carregando informações...</p>
+        <p className="text-stone-500 font-semibold text-xs animate-pulse">
+          Carregando informações...
+        </p>
       </div>
     );
   }
@@ -507,11 +555,17 @@ export default function PontoPage() {
   // If in kiosk mode, render the full-screen kiosk view
   if (isKioskMode) {
     const formattedKioskTime = kioskClock
-      ? kioskClock.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      ? kioskClock.toLocaleTimeString("pt-BR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
       : "00:00:00";
 
     const formattedKioskDate = kioskClock
-      ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "full" }).format(kioskClock)
+      ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "full" }).format(
+          kioskClock,
+        )
       : "";
 
     const capitalizedKioskDate = formattedKioskDate
@@ -560,7 +614,7 @@ export default function PontoPage() {
         <div className="flex flex-col items-center justify-center z-10 my-4">
           <div className="relative group">
             <div className="absolute -inset-1.5 bg-gradient-to-r from-blue-500 to-teal-400 rounded-3xl blur opacity-30 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-            
+
             <div className="relative w-80 h-80 bg-white rounded-3xl p-6 shadow-2xl border border-stone-800/20 flex items-center justify-center flex-col gap-4">
               {qrToken ? (
                 <div className="relative flex items-center justify-center w-full h-full">
@@ -576,14 +630,18 @@ export default function PontoPage() {
               ) : (
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
-                  <p className="text-stone-500 font-bold text-xs uppercase tracking-wider">Gerando token...</p>
+                  <p className="text-stone-500 font-bold text-xs uppercase tracking-wider">
+                    Gerando token...
+                  </p>
                 </div>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 mt-6 bg-slate-800/80 border border-slate-700/50 px-4 py-2 rounded-2xl shadow-lg">
-            <span className="text-stone-400 text-xs font-bold uppercase tracking-wider">Novo QR Code em:</span>
+            <span className="text-stone-400 text-xs font-bold uppercase tracking-wider">
+              Novo QR Code em:
+            </span>
             <span className="bg-blue-500/20 text-blue-400 w-7 h-7 rounded-xl flex items-center justify-center font-bold text-sm border border-blue-500/20 font-mono">
               {qrCountdown}
             </span>
@@ -593,7 +651,9 @@ export default function PontoPage() {
         {/* Bottom Instruction and Exit button */}
         <div className="w-full max-w-md flex flex-col items-center gap-6 z-10 text-center px-4">
           <p className="text-stone-400 text-sm leading-relaxed max-w-sm">
-            Abra a câmera do seu celular no app <strong className="text-stone-200">ConectaRH</strong> e escaneie o código para registrar sua entrada ou saída.
+            Abra a câmera do seu celular no app{" "}
+            <strong className="text-stone-200">ConectaRH</strong> e escaneie o
+            código para registrar sua entrada ou saída.
           </p>
 
           <button
@@ -612,8 +672,11 @@ export default function PontoPage() {
         {/* Exit Authentication Overlay Modal */}
         {showExitAuthModal && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowExitAuthModal(false)} />
-            
+            <div
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+              onClick={() => setShowExitAuthModal(false)}
+            />
+
             <div className="relative w-full max-w-md transform overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 p-8 text-left shadow-2xl transition-all z-10 text-slate-100 animate-scale-up">
               <button
                 onClick={() => setShowExitAuthModal(false)}
@@ -627,12 +690,19 @@ export default function PontoPage() {
                   <ShieldAlert className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-200">Segurança do Kiosk</h3>
-                  <p className="text-stone-500 text-xs mt-0.5">Insira as credenciais de admin para fechar o totem.</p>
+                  <h3 className="text-lg font-bold text-slate-200">
+                    Segurança do Kiosk
+                  </h3>
+                  <p className="text-stone-500 text-xs mt-0.5">
+                    Insira as credenciais de admin para fechar o totem.
+                  </p>
                 </div>
               </div>
 
-              <form onSubmit={handleExitKioskAuth} className="flex flex-col gap-4">
+              <form
+                onSubmit={handleExitKioskAuth}
+                className="flex flex-col gap-4"
+              >
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
                     Senha do Administrador
@@ -693,7 +763,7 @@ export default function PontoPage() {
   if (currentUser && currentUser.role !== "ADMIN") {
     // Find today's point record
     const todayStr = new Date().toISOString().split("T")[0];
-    const todayRecord = timeRecords.find(r => r.date.startsWith(todayStr));
+    const todayRecord = timeRecords.find((r) => r.date.startsWith(todayStr));
 
     // Resolve today's point state
     let statusText = "Não Iniciado";
@@ -705,31 +775,41 @@ export default function PontoPage() {
         statusText = "Finalizado";
         statusColor = "bg-purple-50 text-purple-600 border-purple-100";
         statusIcon = <CheckCircle2 className="h-4 w-4" />;
-      } else if (todayRecord.pauses?.some(p => !p.endTime)) {
+      } else if (todayRecord.pauses?.some((p) => !p.endTime)) {
         statusText = "Em Pausa";
-        statusColor = "bg-orange-50 text-orange-600 border-orange-100 animate-pulse";
+        statusColor =
+          "bg-orange-50 text-orange-600 border-orange-100 animate-pulse";
         statusIcon = <Clock className="h-4 w-4" />;
       } else {
         statusText = "Trabalhando";
         statusColor = "bg-blue-50 text-blue-600 border-blue-100";
-        statusIcon = <Clock className="h-4 w-4 animate-spin" style={{ animationDuration: "3s" }} />;
+        statusIcon = (
+          <Clock
+            className="h-4 w-4 animate-spin"
+            style={{ animationDuration: "3s" }}
+          />
+        );
       }
     }
 
-    const todayEntry = todayRecord?.entryTime ? formatTime(todayRecord.entryTime) : "--:--";
-    const todayExit = todayRecord?.exitTime ? formatTime(todayRecord.exitTime) : "--:--";
+    const todayEntry = todayRecord?.entryTime
+      ? formatTime(todayRecord.entryTime)
+      : "--:--";
+    const todayExit = todayRecord?.exitTime
+      ? formatTime(todayRecord.exitTime)
+      : "--:--";
     const pausesCount = todayRecord?.pauses?.length || 0;
-    const todayPauses = pausesCount > 0 ? `${pausesCount} ${pausesCount === 1 ? 'pausa' : 'pausas'}` : "Nenhuma";
+    const todayPauses =
+      pausesCount > 0
+        ? `${pausesCount} ${pausesCount === 1 ? "pausa" : "pausas"}`
+        : "Nenhuma";
 
     return (
       <SectionComponent>
         {/* Breadcrumbs and Header */}
         <div className="w-full flex flex-col gap-2">
           <Breadcrumb
-            items={[
-              { label: "Painel", href: "/" },
-              { label: "Meu Ponto" },
-            ]}
+            items={[{ label: "Painel", href: "/" }, { label: "Meu Ponto" }]}
           />
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2">
             <TittleHeader
@@ -751,8 +831,12 @@ export default function PontoPage() {
           {/* Status Card */}
           <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Status de Hoje</span>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border mt-1 ${statusColor}`}>
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                Status de Hoje
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border mt-1 ${statusColor}`}
+              >
                 {statusIcon}
                 {statusText}
               </span>
@@ -765,8 +849,12 @@ export default function PontoPage() {
           {/* Entry Card */}
           <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Horário de Entrada</span>
-              <span className="text-xl font-extrabold text-stone-700 mt-1">{todayEntry}</span>
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                Horário de Entrada
+              </span>
+              <span className="text-xl font-extrabold text-stone-700 mt-1">
+                {todayEntry}
+              </span>
             </div>
             <div className="p-3 bg-blue-50 text-blue-500 rounded-2xl">
               <Clock size={20} />
@@ -776,8 +864,12 @@ export default function PontoPage() {
           {/* Pauses Card */}
           <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Pausas Hoje</span>
-              <span className="text-xl font-extrabold text-stone-700 mt-1">{todayPauses}</span>
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                Pausas Hoje
+              </span>
+              <span className="text-xl font-extrabold text-stone-700 mt-1">
+                {todayPauses}
+              </span>
             </div>
             <div className="p-3 bg-orange-50 text-orange-500 rounded-2xl">
               <Clock size={20} />
@@ -787,8 +879,12 @@ export default function PontoPage() {
           {/* Exit Card */}
           <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Horário de Saída</span>
-              <span className="text-xl font-extrabold text-stone-700 mt-1">{todayExit}</span>
+              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                Horário de Saída
+              </span>
+              <span className="text-xl font-extrabold text-stone-700 mt-1">
+                {todayExit}
+              </span>
             </div>
             <div className="p-3 bg-purple-50 text-purple-500 rounded-2xl">
               <Clock size={20} />
@@ -799,16 +895,23 @@ export default function PontoPage() {
         {/* History Table */}
         <div className="w-full bg-white rounded-3xl border border-stone-100 shadow-sm overflow-hidden mt-6">
           <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-            <h3 className="font-bold text-stone-700 text-sm">Histórico de Registros</h3>
-            <span className="text-stone-400 text-xs font-semibold">{timeRecords.length} dias registrados</span>
+            <h3 className="font-bold text-stone-700 text-sm">
+              Histórico de Registros
+            </h3>
+            <span className="text-stone-400 text-xs font-semibold">
+              {timeRecords.length} dias registrados
+            </span>
           </div>
 
           {timeRecords.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center text-center gap-3 px-6">
               <Clock size={40} className="text-stone-300" />
-              <p className="text-stone-600 font-semibold text-sm">Nenhum registro de ponto encontrado</p>
+              <p className="text-stone-600 font-semibold text-sm">
+                Nenhum registro de ponto encontrado
+              </p>
               <p className="text-stone-400 text-xs max-w-xs leading-relaxed">
-                Você ainda não realizou nenhum registro de ponto no sistema. Use o botão "Bater Ponto" acima para escanear o totem.
+                Você ainda não realizou nenhum registro de ponto no sistema. Use
+                o botão "Bater Ponto" acima para escanear o totem.
               </p>
             </div>
           ) : (
@@ -816,15 +919,26 @@ export default function PontoPage() {
               <table className="w-full border-collapse text-left">
                 <thead>
                   <tr className="bg-stone-50 border-b border-stone-100">
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Data</th>
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Entrada</th>
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Saída</th>
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Pausas</th>
+                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                      Data
+                    </th>
+                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                      Entrada
+                    </th>
+                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                      Saída
+                    </th>
+                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                      Pausas
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
                   {timeRecords.map((record) => (
-                    <tr key={record.id} className="hover:bg-stone-50/40 transition-colors">
+                    <tr
+                      key={record.id}
+                      className="hover:bg-stone-50/40 transition-colors"
+                    >
                       <td className="py-4 px-6 font-semibold text-stone-600 text-xs">
                         <div className="flex items-center gap-1.5">
                           <Calendar size={13} className="text-stone-400" />
@@ -832,17 +946,23 @@ export default function PontoPage() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.entryTime ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-stone-50 text-stone-400 border border-stone-100'}`}>
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.entryTime ? "bg-blue-50 text-blue-600 border border-blue-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
+                        >
                           {formatTime(record.entryTime)}
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.exitTime ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-stone-50 text-stone-400 border border-stone-100'}`}>
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.exitTime ? "bg-purple-50 text-purple-600 border border-purple-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
+                        >
                           {formatTime(record.exitTime)}
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-lg ${record.pauses && record.pauses.length > 0 ? 'bg-teal-50 text-teal-600 border border-teal-100' : 'bg-stone-50 text-stone-400 border border-stone-100'}`}>
+                        <span
+                          className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-lg ${record.pauses && record.pauses.length > 0 ? "bg-teal-50 text-teal-600 border border-teal-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
+                        >
                           {calculateTotalPauses(record.pauses)}
                         </span>
                       </td>
@@ -857,7 +977,10 @@ export default function PontoPage() {
         {/* Camera Scanner Modal Overlay */}
         {scanning && (
           <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-md" onClick={stopScanner} />
+            <div
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+              onClick={stopScanner}
+            />
             <div className="relative w-full max-w-md transform overflow-hidden rounded-3xl bg-slate-900 border border-slate-800 p-8 text-left shadow-2xl transition-all z-10 text-slate-100 animate-scale-up">
               <button
                 onClick={stopScanner}
@@ -871,13 +994,20 @@ export default function PontoPage() {
                   <QrCode className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-200">Escanear QR Code</h3>
-                  <p className="text-stone-500 text-xs mt-0.5">Aponte a câmera para o QR Code do Totem.</p>
+                  <h3 className="text-lg font-bold text-slate-200">
+                    Escanear QR Code
+                  </h3>
+                  <p className="text-stone-500 text-xs mt-0.5">
+                    Aponte a câmera para o QR Code do Totem.
+                  </p>
                 </div>
               </div>
 
               <div className="flex flex-col gap-4 items-center justify-center">
-                <div id="qr-reader" className="w-full max-w-xs overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 aspect-square flex items-center justify-center relative">
+                <div
+                  id="qr-reader"
+                  className="w-full max-w-xs overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 aspect-square flex items-center justify-center relative"
+                >
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_8px_rgba(59,130,246,0.8)] rounded-full animate-scan pointer-events-none" />
                 </div>
 
@@ -889,7 +1019,8 @@ export default function PontoPage() {
                 )}
 
                 <p className="text-stone-400 text-xs text-center leading-relaxed max-w-xs mt-2">
-                  Certifique-se de conceder permissão de acesso à câmera no seu navegador.
+                  Certifique-se de conceder permissão de acesso à câmera no seu
+                  navegador.
                 </p>
               </div>
 
@@ -919,14 +1050,20 @@ export default function PontoPage() {
               <div className="flex items-center gap-3 bg-stone-50 p-4 rounded-2xl border border-stone-250">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={currentUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}`}
+                  src={
+                    currentUser.avatar ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}`
+                  }
                   alt={currentUser.name}
                   className="h-12 w-12 rounded-full object-cover border border-stone-200"
                 />
                 <div className="flex flex-col leading-tight">
-                  <span className="font-bold text-stone-700 text-sm">{currentUser.name}</span>
+                  <span className="font-bold text-stone-700 text-sm">
+                    {currentUser.name}
+                  </span>
                   <span className="text-stone-400 text-[10px] uppercase font-bold tracking-wider mt-0.5">
-                    {currentUser.jobPosition?.department?.name || "Sem Setor"} • {currentUser.jobPosition?.name || "Sem Cargo"}
+                    {currentUser.jobPosition?.department?.name || "Sem Setor"} •{" "}
+                    {currentUser.jobPosition?.name || "Sem Cargo"}
                   </span>
                 </div>
               </div>
@@ -934,19 +1071,32 @@ export default function PontoPage() {
               {/* Date & Time info */}
               <div className="grid grid-cols-2 gap-3 bg-stone-50 p-4 rounded-2xl border border-stone-150">
                 <div className="flex flex-col leading-tight">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Data do Registro</span>
-                  <span className="font-extrabold text-stone-700 text-sm mt-1">{new Date().toLocaleDateString("pt-BR")}</span>
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                    Data do Registro
+                  </span>
+                  <span className="font-extrabold text-stone-700 text-sm mt-1">
+                    {new Date().toLocaleDateString("pt-BR")}
+                  </span>
                 </div>
                 <div className="flex flex-col leading-tight">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Hora do Registro</span>
-                  <span className="font-extrabold text-stone-700 text-sm mt-1">{new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                    Hora do Registro
+                  </span>
+                  <span className="font-extrabold text-stone-700 text-sm mt-1">
+                    {new Date().toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
               </div>
 
               {getRecordTypeOptions().length === 0 ? (
                 <div className="text-xs text-amber-600 flex items-center gap-2 bg-amber-50 p-4 rounded-2xl border border-amber-100 mt-1">
                   <AlertCircle size={16} className="shrink-0" />
-                  <span>Todos os registros de ponto de hoje já foram concluídos.</span>
+                  <span>
+                    Todos os registros de ponto de hoje já foram concluídos.
+                  </span>
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">
@@ -1120,9 +1270,12 @@ export default function PontoPage() {
         ) : filteredRecords.length === 0 ? (
           <div className="py-16 flex flex-col items-center justify-center text-center gap-3 px-6">
             <Clock size={40} className="text-stone-300" />
-            <p className="text-stone-600 font-semibold text-sm">Nenhum registro de ponto encontrado</p>
+            <p className="text-stone-600 font-semibold text-sm">
+              Nenhum registro de ponto encontrado
+            </p>
             <p className="text-stone-400 text-xs max-w-xs leading-relaxed">
-              Não existem registros de ponto que atendam aos critérios de busca ou filtros selecionados.
+              Não existem registros de ponto que atendam aos critérios de busca
+              ou filtros selecionados.
             </p>
           </div>
         ) : (
@@ -1130,17 +1283,32 @@ export default function PontoPage() {
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr className="bg-stone-50 border-b border-stone-100">
-                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Colaborador</th>
-                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Setor / Cargo</th>
-                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Data</th>
-                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Entrada</th>
-                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Saída</th>
-                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">Pausas</th>
+                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    Colaborador
+                  </th>
+                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    Setor / Cargo
+                  </th>
+                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    Data
+                  </th>
+                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    Entrada
+                  </th>
+                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    Saída
+                  </th>
+                  <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    Pausas
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {filteredRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-stone-50/40 transition-colors">
+                  <tr
+                    key={record.id}
+                    className="hover:bg-stone-50/40 transition-colors"
+                  >
                     {/* Collaborator */}
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
@@ -1154,8 +1322,12 @@ export default function PontoPage() {
                           className="h-9 w-9 rounded-full object-cover border border-stone-200"
                         />
                         <div className="flex flex-col leading-tight">
-                          <span className="font-bold text-stone-700 text-xs">{record.user.name}</span>
-                          <span className="text-[10px] text-stone-400 font-normal mt-0.5">{record.user.email}</span>
+                          <span className="font-bold text-stone-700 text-xs">
+                            {record.user.name}
+                          </span>
+                          <span className="text-[10px] text-stone-400 font-normal mt-0.5">
+                            {record.user.email}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -1164,7 +1336,8 @@ export default function PontoPage() {
                     <td className="py-4 px-6">
                       <div className="flex flex-col leading-tight">
                         <span className="font-semibold text-stone-700 text-xs">
-                          {record.user.jobPosition?.department?.name || "Sem setor"}
+                          {record.user.jobPosition?.department?.name ||
+                            "Sem setor"}
                         </span>
                         <span className="text-[10px] text-stone-400 font-normal mt-0.5">
                           {record.user.jobPosition?.name || "Sem cargo"}
@@ -1236,7 +1409,8 @@ export default function PontoPage() {
         >
           <div className="flex flex-col gap-1 mb-4">
             <p className="text-stone-500 text-xs font-medium leading-relaxed">
-              Para entrar no Modo Totem de Ponto e exibir o relógio e QR Code, digite suas credenciais de administrador.
+              Para entrar no Modo Totem de Ponto e exibir o relógio e QR Code,
+              digite suas credenciais de administrador.
             </p>
           </div>
 
