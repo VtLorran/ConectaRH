@@ -30,6 +30,48 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const queryUserId = searchParams.get("userId");
 
+    // Se for ADMIN e não passou userId, retorna TODOS os registros
+    if (user.role === "ADMIN" && !queryUserId) {
+      const timeRecords = await prisma.timeRecord.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              cpf: true,
+              avatar: true,
+              jobPosition: {
+                select: {
+                  id: true,
+                  name: true,
+                  department: {
+                    select: {
+                      id: true,
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          pauses: {
+            include: {
+              pauseCategory: true
+            },
+            orderBy: {
+              startTime: "asc"
+            }
+          }
+        },
+        orderBy: {
+          date: "desc"
+        }
+      });
+
+      return NextResponse.json({ success: true, data: timeRecords });
+    }
+
     let targetUserId = queryUserId;
     if (user.role !== "ADMIN") {
       targetUserId = user.userID; // Usuários normais só veem seu próprio ponto
@@ -42,6 +84,27 @@ export async function GET(request: Request) {
     const timeRecords = await prisma.timeRecord.findMany({
       where: { userId: targetUserId },
       include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            cpf: true,
+            avatar: true,
+            jobPosition: {
+              select: {
+                id: true,
+                name: true,
+                department: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        },
         pauses: {
           include: {
             pauseCategory: true

@@ -24,6 +24,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import Modal from "@/components/Modal";
 import InputField from "@/components/InputField";
 import SubmitButton from "@/components/SubmitButton";
+import { useRouter } from "next/navigation";
 
 interface DocumentItem {
   id: string;
@@ -47,6 +48,7 @@ export default function DocumentosPage() {
 
   // Navigation state: selected folder
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  const router = useRouter();
 
   // Modal States - Folder
   const [isAddingFolder, setIsAddingFolder] = useState(false);
@@ -75,7 +77,9 @@ export default function DocumentosPage() {
       if (result.success) {
         setFolders(result.data);
         if (selectFolderIdToRefresh) {
-          const updatedSelected = result.data.find((f: Folder) => f.id === selectFolderIdToRefresh);
+          const updatedSelected = result.data.find(
+            (f: Folder) => f.id === selectFolderIdToRefresh,
+          );
           if (updatedSelected) {
             setSelectedFolder(updatedSelected);
           }
@@ -122,7 +126,11 @@ export default function DocumentosPage() {
 
   const handleDeleteFolder = async (folderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm("Tem certeza que deseja excluir esta pasta e TODOS os seus arquivos permanentemente?")) {
+    if (
+      !window.confirm(
+        "Tem certeza que deseja excluir esta pasta e TODOS os seus arquivos permanentemente?",
+      )
+    ) {
       return;
     }
     try {
@@ -245,34 +253,56 @@ export default function DocumentosPage() {
   };
 
   const filteredFolders = useMemo(() => {
-    return folders.filter((f) => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return folders.filter((f) =>
+      f.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
   }, [folders, searchQuery]);
 
   const filteredDocuments = useMemo(() => {
     if (!selectedFolder) return [];
     return selectedFolder.documents.filter((d) =>
-      d.name.toLowerCase().includes(searchQuery.toLowerCase())
+      d.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [selectedFolder, searchQuery]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return d.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
-  const isBase64Pdf = (value: string) => value.startsWith("data:application/pdf");
+  const isBase64Pdf = (value: string) =>
+    value.startsWith("data:application/pdf");
   const isBase64Image = (value: string) => value.startsWith("data:image/");
 
   const breadcrumbs = [
+    { label: "Painel", href: "/" },
     { label: "Documentos", href: "/documentos" },
+    ...(selectedFolder ? [{ label: selectedFolder.name, href: "#" }] : []),
+  ];
+
+  const alternativeBreadcrumbs = [
+    { label: "Painel", href: "/" },
+    { label: "Documentos", onclick: () => router.back() },
     ...(selectedFolder ? [{ label: selectedFolder.name, href: "#" }] : []),
   ];
 
   return (
     <SectionComponent>
-      <TittleHeader tittle="Arquivos e Documentos" className="w-full" />
+      <TittleHeader
+        tittle="Arquivos e Documentos"
+        description="Criação de pastas e armazenamento de documentos"
+        className="w-full"
+      />
       <div className="w-full">
-        <Breadcrumb items={breadcrumbs} />
+        {selectedFolder ? (
+          <Breadcrumb items={alternativeBreadcrumbs} />
+        ) : (
+          <Breadcrumb items={breadcrumbs} />
+        )}
       </div>
 
       {/* Main Layout Area */}
@@ -281,23 +311,18 @@ export default function DocumentosPage() {
         <div className="w-full bg-white p-6 rounded-3xl shadow-xl border border-stone-100/50 flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Back button or search */}
           <div className="flex items-center gap-3 w-full md:max-w-md flex-1">
-            {selectedFolder && (
-              <button
-                onClick={() => {
-                  setSelectedFolder(null);
-                  setSearchQuery("");
-                }}
-                className="bg-stone-50 hover:bg-stone-100 text-stone-600 p-3 rounded-2xl border border-stone-200 transition-colors cursor-pointer shrink-0"
-                title="Voltar para pastas"
-              >
-                <ArrowLeft size={18} />
-              </button>
-            )}
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+              <Search
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"
+                size={18}
+              />
               <input
                 type="text"
-                placeholder={selectedFolder ? "Pesquisar documentos..." : "Pesquisar pastas..."}
+                placeholder={
+                  selectedFolder
+                    ? "Pesquisar documentos..."
+                    : "Pesquisar pastas..."
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-stone-50 border border-stone-200/80 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none text-stone-700 font-medium"
@@ -354,9 +379,16 @@ export default function DocumentosPage() {
 
                 {filteredFolders.length === 0 ? (
                   <div className="py-16 text-center">
-                    <FolderIcon size={48} className="mx-auto text-stone-300 mb-4" />
-                    <h4 className="text-stone-700 font-bold text-base">Nenhuma pasta encontrada</h4>
-                    <p className="text-stone-400 text-xs mt-1">Crie pastas para organizar seus documentos.</p>
+                    <FolderIcon
+                      size={48}
+                      className="mx-auto text-stone-300 mb-4"
+                    />
+                    <h4 className="text-stone-700 font-bold text-base">
+                      Nenhuma pasta encontrada
+                    </h4>
+                    <p className="text-stone-400 text-xs mt-1">
+                      Crie pastas para organizar seus documentos.
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -380,8 +412,8 @@ export default function DocumentosPage() {
                             {folder.documents.length === 0
                               ? "Sem documentos"
                               : folder.documents.length === 1
-                              ? "1 documento"
-                              : `${folder.documents.length} documentos`}
+                                ? "1 documento"
+                                : `${folder.documents.length} documentos`}
                           </p>
                           <p className="text-[10px] text-stone-400 mt-2">
                             Criado em {formatDate(folder.createdAt)}
@@ -423,9 +455,17 @@ export default function DocumentosPage() {
 
                 {filteredDocuments.length === 0 ? (
                   <div className="py-16 text-center">
-                    <FileText size={48} className="mx-auto text-stone-300 mb-4" />
-                    <h4 className="text-stone-700 font-bold text-base">Nenhum documento nesta pasta</h4>
-                    <p className="text-stone-400 text-xs mt-1">Clique em "Enviar Documento" para carregar arquivos nesta pasta.</p>
+                    <FileText
+                      size={48}
+                      className="mx-auto text-stone-300 mb-4"
+                    />
+                    <h4 className="text-stone-700 font-bold text-base">
+                      Nenhum documento nesta pasta
+                    </h4>
+                    <p className="text-stone-400 text-xs mt-1">
+                      Clique em "Enviar Documento" para carregar arquivos nesta
+                      pasta.
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -452,7 +492,10 @@ export default function DocumentosPage() {
                                 <Trash2 size={15} />
                               </button>
                             </div>
-                            <h4 className="font-bold text-stone-850 mt-3.5 leading-snug line-clamp-2" title={doc.name}>
+                            <h4
+                              className="font-bold text-stone-850 mt-3.5 leading-snug line-clamp-2"
+                              title={doc.name}
+                            >
                               {doc.name}
                             </h4>
                           </div>
@@ -467,7 +510,9 @@ export default function DocumentosPage() {
                               <button
                                 type="button"
                                 disabled={loadingFileId !== null}
-                                onClick={() => handlePreviewFile(doc.id, doc.name)}
+                                onClick={() =>
+                                  handlePreviewFile(doc.id, doc.name)
+                                }
                                 className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm disabled:opacity-50"
                                 title="Visualizar Documento"
                               >
@@ -481,7 +526,9 @@ export default function DocumentosPage() {
                               <button
                                 type="button"
                                 disabled={loadingFileId !== null}
-                                onClick={() => handleDownloadFile(doc.id, doc.name)}
+                                onClick={() =>
+                                  handleDownloadFile(doc.id, doc.name)
+                                }
                                 className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm disabled:opacity-50"
                                 title="Baixar Documento"
                               >
@@ -517,7 +564,12 @@ export default function DocumentosPage() {
         >
           <form onSubmit={handleCreateFolder} className="space-y-4">
             <div className="space-y-1.5">
-              <label htmlFor="folder-name" className="text-xs font-bold text-stone-700">Nome da Pasta</label>
+              <label
+                htmlFor="folder-name"
+                className="text-xs font-bold text-stone-700"
+              >
+                Nome da Pasta
+              </label>
               <InputField
                 id="folder-name"
                 placeholder="Ex: Contratos, Jovem Aprendizes, Termos..."
@@ -534,7 +586,7 @@ export default function DocumentosPage() {
               </div>
             )}
 
-            <div className="flex justify-end gap-3 border-t border-stone-100 pt-4 mt-2">
+            <div className="flex justify-center gap-3 border-t border-stone-100 pt-4 mt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -571,7 +623,12 @@ export default function DocumentosPage() {
         >
           <form onSubmit={handleUploadDocument} className="space-y-4">
             <div className="space-y-1.5">
-              <label htmlFor="doc-name" className="text-xs font-bold text-stone-700">Nome do Documento (Opcional)</label>
+              <label
+                htmlFor="doc-name"
+                className="text-xs font-bold text-stone-700"
+              >
+                Nome do Documento (Opcional)
+              </label>
               <InputField
                 id="doc-name"
                 placeholder="Deixe em branco para usar o nome original do arquivo"
@@ -581,11 +638,18 @@ export default function DocumentosPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-stone-700">Selecione o Arquivo (PDF ou Imagem)</label>
+              <label className="text-xs font-bold text-stone-700">
+                Selecione o Arquivo (PDF ou Imagem)
+              </label>
               <label className="flex flex-col items-center justify-center gap-2 border border-dashed border-stone-300 hover:border-blue-500 bg-stone-50/50 hover:bg-stone-50 py-8 px-4 rounded-xl cursor-pointer text-xs font-bold text-stone-500 hover:text-blue-500 transition-all text-center">
-                <Upload size={24} className="text-stone-450 group-hover:text-blue-500" />
+                <Upload
+                  size={24}
+                  className="text-stone-450 group-hover:text-blue-500"
+                />
                 {selectedFile ? (
-                  <span className="text-blue-600 font-semibold truncate max-w-xs">{selectedFile.name}</span>
+                  <span className="text-blue-600 font-semibold truncate max-w-xs">
+                    {selectedFile.name}
+                  </span>
                 ) : (
                   <span>Clique para selecionar o arquivo</span>
                 )}
@@ -608,7 +672,7 @@ export default function DocumentosPage() {
               </div>
             )}
 
-            <div className="flex justify-end gap-3 border-t border-stone-100 pt-4 mt-2">
+            <div className="flex gap-3 border-t  border-stone-100 pt-4 justify-center mt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -680,7 +744,10 @@ export default function DocumentosPage() {
                 />
               ) : (
                 <div className="p-6 text-center text-stone-500">
-                  <AlertCircle size={32} className="mx-auto mb-2 text-stone-400" />
+                  <AlertCircle
+                    size={32}
+                    className="mx-auto mb-2 text-stone-400"
+                  />
                   Visualização não suportada para este tipo de arquivo.
                 </div>
               )}

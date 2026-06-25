@@ -75,7 +75,7 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalSectorId, setModalSectorId] = useState("");
   const [modalUserId, setModalUserId] = useState("");
-  
+
   // Current requirement input states
   const [reqName, setReqName] = useState("");
   const [reqType, setReqType] = useState<"file" | "text">("file");
@@ -86,7 +86,9 @@ export default function OnboardingPage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   // UI Expanded state for details
-  const [expandedCollaboratorId, setExpandedCollaboratorId] = useState<string | null>(null);
+  const [expandedCollaboratorId, setExpandedCollaboratorId] = useState<
+    string | null
+  >(null);
 
   // Preview file states
   const [previewingFile, setPreviewingFile] = useState<string | null>(null);
@@ -133,11 +135,13 @@ export default function OnboardingPage() {
       // Exibe apenas colaboradores com requisições de documentos no painel principal
       if (!c.documentRequests || c.documentRequests.length === 0) return false;
 
-      const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch =
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.email.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const deptId = c.jobPosition?.department?.id;
-      const matchesSector = selectedSector === "all" || deptId === selectedSector;
+      const matchesSector =
+        selectedSector === "all" || deptId === selectedSector;
 
       return matchesSearch && matchesSector;
     });
@@ -147,20 +151,27 @@ export default function OnboardingPage() {
   const modalUsers = useMemo(() => {
     if (!modalSectorId) return [];
     return collaborators.filter(
-      (c) => c.jobPosition?.department?.id === modalSectorId
+      (c) => c.jobPosition?.department?.id === modalSectorId,
     );
   }, [collaborators, modalSectorId]);
 
   const handleAddRequirement = () => {
     if (!reqName.trim()) return;
-    
+
     // Avoid duplicate names in the same request
-    if (tempRequirements.some((r) => r.name.toLowerCase() === reqName.trim().toLowerCase())) {
+    if (
+      tempRequirements.some(
+        (r) => r.name.toLowerCase() === reqName.trim().toLowerCase(),
+      )
+    ) {
       alert("Já existe um documento com este nome na lista.");
       return;
     }
 
-    setTempRequirements([...tempRequirements, { name: reqName.trim(), type: reqType }]);
+    setTempRequirements([
+      ...tempRequirements,
+      { name: reqName.trim(), type: reqType },
+    ]);
     setReqName("");
   };
 
@@ -179,7 +190,9 @@ export default function OnboardingPage() {
     }
 
     if (tempRequirements.length === 0) {
-      setErrorMessage("Por favor, adicione pelo menos um documento ou informação.");
+      setErrorMessage(
+        "Por favor, adicione pelo menos um documento ou informação.",
+      );
       return;
     }
 
@@ -197,14 +210,16 @@ export default function OnboardingPage() {
 
       const result = await res.json();
       if (!res.ok || !result.success) {
-        throw new Error(result.message || "Erro ao criar requisição de onboarding");
+        throw new Error(
+          result.message || "Erro ao criar requisição de onboarding",
+        );
       }
 
       setSuccessMessage("Requisitos enviados com sucesso para o colaborador!");
       setTempRequirements([]);
       setModalSectorId("");
       setModalUserId("");
-      
+
       await fetchAllData();
 
       setTimeout(() => {
@@ -219,7 +234,11 @@ export default function OnboardingPage() {
   };
 
   const handleDeleteRequest = async (requestId: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir esta requisição de documentos permanentemente?")) {
+    if (
+      !window.confirm(
+        "Tem certeza que deseja excluir esta requisição de documentos permanentemente?",
+      )
+    ) {
       return;
     }
 
@@ -244,7 +263,7 @@ export default function OnboardingPage() {
     reqAnswers: Answer[],
     answerName: string,
     action: "approved" | "rejected",
-    feedbackText: string | null = null
+    feedbackText: string | null = null,
   ) => {
     const updatedAnswers = reqAnswers.map((ans) => {
       if (ans.name === answerName) {
@@ -266,7 +285,9 @@ export default function OnboardingPage() {
 
       const result = await res.json();
       if (!res.ok || !result.success) {
-        throw new Error(result.message || "Erro ao atualizar status do documento");
+        throw new Error(
+          result.message || "Erro ao atualizar status do documento",
+        );
       }
 
       await fetchAllData();
@@ -296,7 +317,9 @@ export default function OnboardingPage() {
   const fetchFullFile = async (requestId: string, name: string) => {
     setLoadingFileKey(`${requestId}-${name}`);
     try {
-      const res = await fetch(`/api/onboarding/${requestId}/documento?name=${encodeURIComponent(name)}`);
+      const res = await fetch(
+        `/api/onboarding/${requestId}/documento?name=${encodeURIComponent(name)}`,
+      );
       if (!res.ok) {
         throw new Error("Erro ao carregar o arquivo completo.");
       }
@@ -311,7 +334,11 @@ export default function OnboardingPage() {
     }
   };
 
-  const handlePreviewFile = (requestId: string, name: string, value: string) => {
+  const handlePreviewFile = (
+    requestId: string,
+    name: string,
+    value: string,
+  ) => {
     if (value.endsWith("PLACEHOLDER")) {
       fetchFullFile(requestId, name);
     } else {
@@ -320,12 +347,18 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleDownloadFile = async (requestId: string, name: string, value: string) => {
+  const handleDownloadFile = async (
+    requestId: string,
+    name: string,
+    value: string,
+  ) => {
     let base64Data = value;
     if (value.endsWith("PLACEHOLDER")) {
       setLoadingFileKey(`${requestId}-${name}`);
       try {
-        const res = await fetch(`/api/onboarding/${requestId}/documento?name=${encodeURIComponent(name)}`);
+        const res = await fetch(
+          `/api/onboarding/${requestId}/documento?name=${encodeURIComponent(name)}`,
+        );
         if (!res.ok) throw new Error();
         const data = await res.json();
         base64Data = data.fileData;
@@ -345,52 +378,62 @@ export default function OnboardingPage() {
     link.click();
   };
 
-  const isBase64Pdf = (value: string) => value.startsWith("data:application/pdf");
+  const isBase64Pdf = (value: string) =>
+    value.startsWith("data:application/pdf");
   const isBase64Image = (value: string) => value.startsWith("data:image/");
 
-  const trilhaNavegacao = [{ label: "Onboarding", href: "/onboarding" }];
+  const trilhaNavegacao = [
+    { label: "Painel", href: "/" },
+    { label: "Onboarding", href: "/onboarding" },
+  ];
 
   return (
     <SectionComponent>
-      <TittleHeader tittle="Gestão de Onboarding" className="w-full" />
+      <TittleHeader
+        tittle="Gestão de Onboarding"
+        description="Requisição e acompanhamento de documentos dos usuários"
+        className="w-full"
+      />
       <div className="w-full">
         <Breadcrumb items={trilhaNavegacao} />
       </div>
 
       {/* Caixa de Ações Principais */}
-      <div className="w-full bg-white p-6 rounded-3xl shadow-xl border border-stone-100/50 flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Barra de Pesquisa */}
-        <div className="relative w-full md:max-w-md flex-1">
-          <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Pesquisar por colaborador..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-stone-50 border border-stone-200/80 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none text-stone-700 font-medium"
-          />
-        </div>
+      <div className="w-full bg-white p-6 rounded-3xl shadow-xl border border-stone-100/50 flex flex-col md:flex-row items-center justify-between  gap-4">
+        <div className="flex md:flex-row gap-5">
+          {/* Barra de Pesquisa */}
 
-        {/* Filtro de Setor */}
-        <div className="relative w-full md:max-w-[240px] flex items-center gap-2 bg-stone-50 border border-stone-200/80 rounded-2xl px-3.5 py-3 shrink-0">
-          <Building2 size={16} className="text-stone-400" />
-          <select
-            value={selectedSector}
-            onChange={(e) => setSelectedSector(e.target.value)}
-            className="bg-transparent text-sm font-bold text-stone-650 focus:outline-none border-none py-0.5 cursor-pointer w-full"
-          >
-            <option value="all">Filtrar por Setor</option>
-            {sectors.map((dept) => (
-              <option key={dept.id} value={dept.id}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="relative w-full md:max-w-md flex-1">
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Pesquisar por colaborador..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-stone-50 border border-stone-200/80 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none text-stone-700 font-medium"
+            />
+          </div>
 
+          {/* Filtro de Setor */}
+          <div className="relative w-full md:max-w-[240px] flex items-center gap-2 bg-stone-50 border border-stone-200/80 rounded-2xl px-3.5 py-3 shrink-0">
+            <Building2 size={16} className="text-stone-400" />
+            <select
+              value={selectedSector}
+              onChange={(e) => setSelectedSector(e.target.value)}
+              className="bg-transparent text-sm font-semibold  text-stone-500 focus:outline-none border-none py-0.5 cursor-pointer w-full"
+            >
+              <option value="all">Filtrar por Setor</option>
+              {sectors.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         {/* Requerer Documentos */}
         <button
           onClick={() => {
@@ -421,7 +464,8 @@ export default function OnboardingPage() {
         ) : filteredCollaborators.length > 0 ? (
           <div className="flex flex-col gap-4">
             {filteredCollaborators.map((c) => {
-              const { total, completed, percentage } = getCollaboratorProgress(c);
+              const { total, completed, percentage } =
+                getCollaboratorProgress(c);
               const isExpanded = expandedCollaboratorId === c.id;
 
               return (
@@ -431,23 +475,34 @@ export default function OnboardingPage() {
                 >
                   {/* Linha Resumo */}
                   <div
-                    onClick={() => setExpandedCollaboratorId(isExpanded ? null : c.id)}
+                    onClick={() =>
+                      setExpandedCollaboratorId(isExpanded ? null : c.id)
+                    }
                     className="flex flex-col lg:flex-row lg:items-center justify-between p-5 gap-4 cursor-pointer hover:bg-stone-50/80 transition-colors"
                   >
                     {/* Infos do Colaborador */}
                     <div className="flex items-center gap-4 min-w-[250px]">
                       <div className="w-12 h-12 rounded-full overflow-hidden border border-stone-200 shrink-0 bg-stone-100 flex items-center justify-center">
                         {c.avatar ? (
-                          <img src={c.avatar} alt={c.name} className="w-full h-full object-cover" />
+                          <img
+                            src={c.avatar}
+                            alt={c.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <User size={20} className="text-stone-400" />
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-stone-800 truncate">{c.name}</h4>
-                        <p className="text-xs text-stone-500 truncate mt-0.5">{c.email}</p>
+                        <h4 className="text-sm font-bold text-stone-800 truncate">
+                          {c.name}
+                        </h4>
+                        <p className="text-xs text-stone-500 truncate mt-0.5">
+                          {c.email}
+                        </p>
                         <p className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-wider">
-                          {c.jobPosition?.department?.name || "Sem Setor"} • {c.jobPosition?.name || "Sem Cargo"}
+                          {c.jobPosition?.department?.name || "Sem Setor"} •{" "}
+                          {c.jobPosition?.name || "Sem Cargo"}
                         </p>
                       </div>
                     </div>
@@ -460,18 +515,22 @@ export default function OnboardingPage() {
                             percentage === 100
                               ? "bg-emerald-500"
                               : percentage > 50
-                              ? "bg-blue-500"
-                              : percentage > 0
-                              ? "bg-amber-500"
-                              : "bg-stone-300"
+                                ? "bg-blue-500"
+                                : percentage > 0
+                                  ? "bg-amber-500"
+                                  : "bg-stone-300"
                           }`}
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-sm font-black text-stone-750">{percentage}%</span>
+                      <div className="text-center shrink-0">
+                        <span className="text-sm font-black  text-stone-750">
+                          {percentage}%
+                        </span>
                         <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mt-0.5">
-                          {total > 0 ? `${completed}/${total} docs` : "Nenhum req."}
+                          {total > 0
+                            ? `${completed}/${total} docs`
+                            : "Nenhum req."}
                         </p>
                       </div>
                     </div>
@@ -499,7 +558,10 @@ export default function OnboardingPage() {
                               <div className="flex items-center justify-between border-b border-stone-100 pb-2">
                                 <span className="text-xs font-bold text-stone-450 flex items-center gap-1.5">
                                   <Calendar size={14} />
-                                  Requisitado em {new Date(req.createdAt).toLocaleDateString("pt-BR")}
+                                  Requisitado em{" "}
+                                  {new Date(req.createdAt).toLocaleDateString(
+                                    "pt-BR",
+                                  )}
                                 </span>
                                 <button
                                   onClick={() => handleDeleteRequest(req.id)}
@@ -512,11 +574,12 @@ export default function OnboardingPage() {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {req.answers.map((ans, aIdx) => {
-                                  const hasValue = ans.value !== null && ans.value !== "";
+                                  const hasValue =
+                                    ans.value !== null && ans.value !== "";
                                   return (
                                     <div
                                       key={aIdx}
-                                      className="bg-white border border-stone-150 p-4 rounded-xl flex flex-col justify-between min-h-[120px] shadow-sm"
+                                      className="bg-white p-4 rounded-xl flex flex-col justify-between min-h-[120px] shadow-sm"
                                     >
                                       <div>
                                         <div className="flex items-center justify-between gap-2">
@@ -524,7 +587,9 @@ export default function OnboardingPage() {
                                             {ans.name}
                                           </span>
                                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 uppercase">
-                                            {ans.type === "file" ? "Arquivo" : "Texto"}
+                                            {ans.type === "file"
+                                              ? "Arquivo"
+                                              : "Texto"}
                                           </span>
                                         </div>
 
@@ -533,7 +598,10 @@ export default function OnboardingPage() {
                                             <>
                                               {ans.type === "file" ? (
                                                 <span className="text-xs text-stone-600 font-semibold flex items-center gap-1">
-                                                  <CheckCircle2 size={13} className="text-emerald-500" />
+                                                  <CheckCircle2
+                                                    size={13}
+                                                    className="text-emerald-500"
+                                                  />
                                                   Arquivo enviado
                                                 </span>
                                               ) : (
@@ -549,7 +617,8 @@ export default function OnboardingPage() {
                                                     <CheckCircle2 size={11} />
                                                     Aprovado
                                                   </span>
-                                                ) : ans.status === "rejected" ? (
+                                                ) : ans.status ===
+                                                  "rejected" ? (
                                                   <>
                                                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-650 bg-red-50 border border-red-200/60 px-2 py-0.5 rounded-full w-fit">
                                                       <AlertCircle size={11} />
@@ -563,7 +632,10 @@ export default function OnboardingPage() {
                                                   </>
                                                 ) : (
                                                   <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full w-fit animate-pulse">
-                                                    <Loader2 size={11} className="animate-spin" />
+                                                    <Loader2
+                                                      size={11}
+                                                      className="animate-spin"
+                                                    />
                                                     Pendente revisão
                                                   </span>
                                                 )}
@@ -584,12 +656,22 @@ export default function OnboardingPage() {
                                             <>
                                               <button
                                                 type="button"
-                                                disabled={loadingFileKey === `${req.id}-${ans.name}`}
-                                                onClick={() => handlePreviewFile(req.id, ans.name, ans.value!)}
+                                                disabled={
+                                                  loadingFileKey ===
+                                                  `${req.id}-${ans.name}`
+                                                }
+                                                onClick={() =>
+                                                  handlePreviewFile(
+                                                    req.id,
+                                                    ans.name,
+                                                    ans.value!,
+                                                  )
+                                                }
                                                 className="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
                                                 title="Visualizar Arquivo"
                                               >
-                                                {loadingFileKey === `${req.id}-${ans.name}` ? (
+                                                {loadingFileKey ===
+                                                `${req.id}-${ans.name}` ? (
                                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                 ) : (
                                                   <Eye size={14} />
@@ -598,12 +680,22 @@ export default function OnboardingPage() {
 
                                               <button
                                                 type="button"
-                                                disabled={loadingFileKey === `${req.id}-${ans.name}`}
-                                                onClick={() => handleDownloadFile(req.id, ans.name, ans.value!)}
+                                                disabled={
+                                                  loadingFileKey ===
+                                                  `${req.id}-${ans.name}`
+                                                }
+                                                onClick={() =>
+                                                  handleDownloadFile(
+                                                    req.id,
+                                                    ans.name,
+                                                    ans.value!,
+                                                  )
+                                                }
                                                 className="bg-stone-100 text-stone-600 hover:bg-stone-200 border border-stone-200/50 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03] disabled:opacity-50"
                                                 title="Baixar Arquivo"
                                               >
-                                                {loadingFileKey === `${req.id}-${ans.name}` ? (
+                                                {loadingFileKey ===
+                                                `${req.id}-${ans.name}` ? (
                                                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                 ) : (
                                                   <Download size={14} />
@@ -616,7 +708,14 @@ export default function OnboardingPage() {
                                             {ans.status !== "approved" && (
                                               <button
                                                 type="button"
-                                                onClick={() => handleReviewAnswer(req.id, req.answers, ans.name, "approved")}
+                                                onClick={() =>
+                                                  handleReviewAnswer(
+                                                    req.id,
+                                                    req.answers,
+                                                    ans.name,
+                                                    "approved",
+                                                  )
+                                                }
                                                 className="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200/60 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
                                                 title="Aprovar"
                                               >
@@ -628,9 +727,17 @@ export default function OnboardingPage() {
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  const reason = window.prompt("Motivo da reprovação / correção do documento:");
+                                                  const reason = window.prompt(
+                                                    "Motivo da reprovação / correção do documento:",
+                                                  );
                                                   if (reason !== null) {
-                                                    handleReviewAnswer(req.id, req.answers, ans.name, "rejected", reason);
+                                                    handleReviewAnswer(
+                                                      req.id,
+                                                      req.answers,
+                                                      ans.name,
+                                                      "rejected",
+                                                      reason,
+                                                    );
                                                   }
                                                 }}
                                                 className="bg-red-50 hover:bg-red-100 text-red-650 border border-red-200/60 p-2 rounded-lg font-bold flex items-center justify-center cursor-pointer transition-all shadow-sm hover:scale-[1.03]"
@@ -652,8 +759,13 @@ export default function OnboardingPage() {
                       ) : (
                         <div className="py-6 flex flex-col items-center justify-center text-center gap-2 bg-stone-50/40 rounded-xl border border-stone-200/40">
                           <Paperclip size={24} className="text-stone-300" />
-                          <p className="text-stone-500 font-semibold text-xs">Nenhum documento requisitado para este colaborador</p>
-                          <p className="text-stone-400 text-[10px]">Utilize o botão &quot;Requerer Documentos&quot; no topo para cadastrar.</p>
+                          <p className="text-stone-500 font-semibold text-xs">
+                            Nenhum documento requisitado para este colaborador
+                          </p>
+                          <p className="text-stone-400 text-[10px]">
+                            Utilize o botão &quot;Requerer Documentos&quot; no
+                            topo para cadastrar.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -664,7 +776,10 @@ export default function OnboardingPage() {
           </div>
         ) : (
           <div className="py-16 flex flex-col items-center justify-center text-center gap-3 bg-stone-50/40 rounded-3xl border border-stone-200/40">
-            <FileCheckCorner size={48} className="text-stone-300 animate-pulse" />
+            <FileCheckCorner
+              size={48}
+              className="text-stone-300 animate-pulse"
+            />
             <p className="text-stone-500 font-semibold text-sm">
               Nenhum colaborador encontrado
             </p>
@@ -704,7 +819,7 @@ export default function OnboardingPage() {
                       setModalSectorId(e.target.value);
                       setModalUserId("");
                     }}
-                    className="w-full bg-stone-50 border border-stone-350 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-550 focus:border-blue-500 cursor-pointer text-stone-700 font-medium"
+                    className="w-full bg-stone-50 border border-stone-400/50 rounded-xl px-3 py-3 text-sm cursor-pointer text-stone-700 font-medium"
                     required
                   >
                     <option value="">Selecione o Setor</option>
@@ -727,7 +842,7 @@ export default function OnboardingPage() {
                     value={modalUserId}
                     onChange={(e) => setModalUserId(e.target.value)}
                     disabled={!modalSectorId}
-                    className="w-full bg-stone-50 border border-stone-350 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-550 focus:border-blue-500 cursor-pointer disabled:opacity-50 text-stone-700 font-medium"
+                    className="w-full bg-stone-50 border border-stone-400/50 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-550 focus:border-blue-500 cursor-pointer disabled:opacity-50 text-stone-700 font-medium"
                     required
                   >
                     <option value="">Selecione o Colaborador</option>
@@ -747,7 +862,7 @@ export default function OnboardingPage() {
                 Documentos e Informações Requeridas
               </h4>
 
-              <div className="flex flex-col sm:flex-row gap-3 items-end">
+              <div className="flex flex-col sm:flex-row gap-3 items-end ">
                 {/* Nome do Item */}
                 <div className="flex-1 flex flex-col gap-1 w-full">
                   <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
@@ -770,18 +885,17 @@ export default function OnboardingPage() {
                   <select
                     value={reqType}
                     onChange={(e) => setReqType(e.target.value as any)}
-                    className="w-full bg-stone-50 border border-stone-350 rounded-xl px-3 py-3.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-550 focus:border-blue-500 cursor-pointer text-stone-700 font-medium"
+                    className="w-full bg-stone-50 border border-stone-400/50 rounded-xl px-3 py-3.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-550 focus:border-blue-500 cursor-pointer text-stone-700 font-medium"
                   >
                     <option value="file">Arquivo (PDF/Img)</option>
                     <option value="text">Texto livre</option>
                   </select>
                 </div>
 
-                {/* Botão + */}
                 <button
                   type="button"
                   onClick={handleAddRequirement}
-                  className="bg-blue-500 hover:bg-blue-600 text-white p-3.5 rounded-xl flex items-center justify-center cursor-pointer transition-colors shrink-0 active:scale-95"
+                  className="bg-blue-500 hover:bg-blue-600 text-white p-3.5 rounded-xl flex items-center justify-center cursor-pointer transition-colors shrink-0 active:scale-95 mb-0.5"
                 >
                   <Plus size={20} />
                 </button>
@@ -831,7 +945,7 @@ export default function OnboardingPage() {
             )}
 
             {/* Botões do Modal */}
-            <div className="flex justify-end gap-3 border-t border-stone-100 pt-4 mt-2">
+            <div className="flex justify-end gap-3 border-t border-stone-100 mx-auto pt-4 mt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -905,7 +1019,10 @@ export default function OnboardingPage() {
                 />
               ) : (
                 <div className="p-6 text-center text-stone-500">
-                  <AlertCircle size={32} className="mx-auto mb-2 text-stone-400" />
+                  <AlertCircle
+                    size={32}
+                    className="mx-auto mb-2 text-stone-400"
+                  />
                   Visualização não suportada para este tipo de resposta.
                 </div>
               )}
