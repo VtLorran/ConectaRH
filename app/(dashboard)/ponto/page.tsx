@@ -261,7 +261,7 @@ export default function PontoPage() {
                 
                 // Show registration modal and default options
                 setShowConfirmRecordModal(true);
-              }).catch(err => console.error("Erro ao parar scanner:", err));
+              }).catch((err: any) => console.error("Erro ao parar scanner:", err));
             },
             (errorMessage: string) => {
               // Verbose scan errors, safe to ignore
