@@ -43,6 +43,7 @@ interface Vacation {
 
 interface CalendarProps {
   collaboratorId: string;
+  readOnly?: boolean;
 }
 
 const DIAS_SEMANA_MAP = [
@@ -57,7 +58,7 @@ const DIAS_SEMANA_MAP = [
 
 const DIAS_SEMANA_SIGLA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-export default function CalendarTab({ collaboratorId }: CalendarProps) {
+export default function CalendarTab({ collaboratorId, readOnly = false }: CalendarProps) {
   const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
   const [vacations, setVacations] = useState<Vacation[]>([]);
   const [timeRecords, setTimeRecords] = useState<any[]>([]);
@@ -369,33 +370,35 @@ export default function CalendarTab({ collaboratorId }: CalendarProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {isEditingFixed ? (
-              <>
+          {!readOnly && (
+            <div className="flex items-center gap-2">
+              {isEditingFixed ? (
+                <>
+                  <button
+                    onClick={() => setIsEditingFixed(false)}
+                    className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSaveFixed}
+                    className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Save size={14} />
+                    Salvar Alterações
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={() => setIsEditingFixed(false)}
-                  className="px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 text-xs font-bold transition-all cursor-pointer"
+                  onClick={() => setIsEditingFixed(true)}
+                  className="flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
                 >
-                  Cancelar
+                  <Edit size={14} />
+                  Editar Semana Fixa
                 </button>
-                <button
-                  onClick={handleSaveFixed}
-                  className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
-                >
-                  <Save size={14} />
-                  Salvar Alterações
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setIsEditingFixed(true)}
-                className="flex items-center gap-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer"
-              >
-                <Edit size={14} />
-                Editar Semana Fixa
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Resumo Rápido de Horas/Dias */}
@@ -520,16 +523,18 @@ export default function CalendarTab({ collaboratorId }: CalendarProps) {
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              setStep(1);
-              setIsAddingSpecific(true);
-            }}
-            className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-          >
-            <Plus size={16} />
-            Inserir Semana Específica
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => {
+                setStep(1);
+                setIsAddingSpecific(true);
+              }}
+              className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              <Plus size={16} />
+              Inserir Semana Específica
+            </button>
+          )}
         </div>
 
         {/* Lista de Escalas Específicas Cadastradas */}
@@ -547,13 +552,15 @@ export default function CalendarTab({ collaboratorId }: CalendarProps) {
                       <span className="text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
                         Específica/Temporária
                       </span>
-                      <button
-                        onClick={() => handleDeleteSchedule(spec.id)}
-                        className="text-stone-400 hover:text-red-500 p-1 rounded transition-colors cursor-pointer"
-                        title="Excluir período"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={() => handleDeleteSchedule(spec.id)}
+                          className="text-stone-400 hover:text-red-500 p-1 rounded transition-colors cursor-pointer"
+                          title="Excluir período"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
 
                     <div className="mt-3 flex items-center gap-2">

@@ -129,7 +129,7 @@ export default function DashboardLayout({
 
       {/* Sidebar Component */}
       <SideBar
-        isAdmin={!isNotAdmin}
+        isAdmin={user?.role === "ADMIN"}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={toggleSidebarCollapse}
         isMobileOpen={isMobileSidebarOpen}

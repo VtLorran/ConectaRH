@@ -200,74 +200,78 @@ export default function SideBar({
           />
         </div>
 
-        {isAdmin && (
-          <div className={`w-full flex flex-col gap-5 p-5 ${isCollapsed ? "lg:px-2 lg:pb-5" : ""}`}>
-            <div className="flex flex-col gap-2">
-              <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
-                Visão Geral
-              </h1>
-              <ButtonSideBar
-                name="DashBoard"
-                redirect="/"
-                icon={<LayoutDashboard />}
-                isCollapsed={isCollapsed}
-              />
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
-                Gestão de Pessoas
-              </h1>
-              <ButtonSideBar
-                name="Colaboradores"
-                redirect="/colaboradores"
-                icon={<Users2 />}
-                isCollapsed={isCollapsed}
-              />
-              <ButtonSideBar
-                name="Setores"
-                redirect="/setores"
-                icon={<Building2 />}
-                isCollapsed={isCollapsed}
-              />
-              <ButtonSideBar
-                name="Admissão"
-                redirect="/admissao"
-                icon={<UserRoundPlus />}
-                isCollapsed={isCollapsed}
-              />
-              <ButtonSideBar
-                name="Onboarding"
-                redirect="/onboarding"
-                icon={<FileCheckCorner />}
-                isCollapsed={isCollapsed}
-              />
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
-                Processos
-              </h1>
-              <ButtonSideBar
-                name="Documentos"
-                redirect="/documentos"
-                icon={<FileSpreadsheet />}
-                isCollapsed={isCollapsed}
-              />
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
-                Operação
-              </h1>
-              <ButtonSideBar
-                name="Ponto"
-                redirect="/ponto"
-                icon={<CheckCircle />}
-                isCollapsed={isCollapsed}
-              />
-            </div>
-            
+        <div className={`w-full flex flex-col gap-5 p-5 ${isCollapsed ? "lg:px-2 lg:pb-5" : ""}`}>
+          {isAdmin && (
+            <>
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Visão Geral
+                </h1>
+                <ButtonSideBar
+                  name="DashBoard"
+                  redirect="/"
+                  icon={<LayoutDashboard />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Gestão de Pessoas
+                </h1>
+                <ButtonSideBar
+                  name="Colaboradores"
+                  redirect="/colaboradores"
+                  icon={<Users2 />}
+                  isCollapsed={isCollapsed}
+                />
+                <ButtonSideBar
+                  name="Setores"
+                  redirect="/setores"
+                  icon={<Building2 />}
+                  isCollapsed={isCollapsed}
+                />
+                <ButtonSideBar
+                  name="Admissão"
+                  redirect="/admissao"
+                  icon={<UserRoundPlus />}
+                  isCollapsed={isCollapsed}
+                />
+                <ButtonSideBar
+                  name="Onboarding"
+                  redirect="/onboarding"
+                  icon={<FileCheckCorner />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Processos
+                </h1>
+                <ButtonSideBar
+                  name="Documentos"
+                  redirect="/documentos"
+                  icon={<FileSpreadsheet />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
+            </>
+          )}
+          
+          <div className="flex flex-col gap-2">
+            <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+              Operação
+            </h1>
+            <ButtonSideBar
+              name="Ponto"
+              redirect="/ponto"
+              icon={<CheckCircle />}
+              isCollapsed={isCollapsed}
+            />
+          </div>
+          
+          {isAdmin && (
             <div className="flex flex-col gap-2">
               <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
                 Comunicação
@@ -279,8 +283,8 @@ export default function SideBar({
                 isCollapsed={isCollapsed}
               />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </aside>
   );

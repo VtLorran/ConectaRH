@@ -25,6 +25,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import Modal from "@/components/Modal";
 import InputField from "@/components/InputField";
 import SubmitButton from "@/components/SubmitButton";
+import CalendarTab from "@/app/(dashboard)/colaboradores/[id]/_components/Calendar";
 
 interface Pause {
   id: string;
@@ -77,6 +78,7 @@ interface PauseCategory {
 export default function PontoPage() {
   // Navigation / Tab states (Admin only)
   const [activeTab, setActiveTab] = useState<"geral" | "setor">("geral");
+  const [colabTab, setColabTab] = useState<"registro" | "escala">("registro");
   const [selectedSectorId, setSelectedSectorId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -816,163 +818,201 @@ export default function PontoPage() {
               tittle="Meu Ponto Eletrônico"
               description="Acompanhe seus horários de entrada, saída, pausas e registre seu ponto via QR Code do totem."
             />
+            {colabTab === "registro" && (
+              <button
+                onClick={startScanner}
+                className="flex items-center justify-center gap-2 bg-[linear-gradient(to_right,#3b82f6,#2563eb)] hover:brightness-110 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition-all active:scale-95 text-sm cursor-pointer shrink-0 w-full md:w-auto"
+              >
+                <QrCode size={18} />
+                Bater Ponto / Ler QR Code
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tab selection for collaborator */}
+        <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-3">
+          <div className="flex bg-white p-1 rounded-2xl border border-stone-200 shadow-xs max-w-sm w-full">
             <button
-              onClick={startScanner}
-              className="flex items-center justify-center gap-2 bg-[linear-gradient(to_right,#3b82f6,#2563eb)] hover:brightness-110 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition-all active:scale-95 text-sm cursor-pointer shrink-0 w-full md:w-auto"
+              onClick={() => setColabTab("registro")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                colabTab === "registro"
+                  ? "bg-stone-900 text-white shadow-sm"
+                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+              }`}
             >
-              <QrCode size={18} />
-              Bater Ponto / Ler QR Code
+              <Clock size={15} />
+              Registros e Logs
+            </button>
+            <button
+              onClick={() => setColabTab("escala")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                colabTab === "escala"
+                  ? "bg-stone-900 text-white shadow-sm"
+                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+              }`}
+            >
+              <Calendar size={15} />
+              Minha Escala
             </button>
           </div>
         </div>
 
-        {/* Status Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 w-full">
-          {/* Status Card */}
-          <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                Status de Hoje
-              </span>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border mt-1 ${statusColor}`}
-              >
-                {statusIcon}
-                {statusText}
-              </span>
-            </div>
-            <div className="p-3 bg-stone-50 rounded-2xl text-stone-400">
-              <Clock size={20} />
-            </div>
-          </div>
+        {colabTab === "registro" ? (
+          <>
+            {/* Status Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 w-full">
+              {/* Status Card */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                    Status de Hoje
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border mt-1 ${statusColor}`}
+                  >
+                    {statusIcon}
+                    {statusText}
+                  </span>
+                </div>
+                <div className="p-3 bg-stone-50 rounded-2xl text-stone-400">
+                  <Clock size={20} />
+                </div>
+              </div>
 
-          {/* Entry Card */}
-          <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                Horário de Entrada
-              </span>
-              <span className="text-xl font-extrabold text-stone-700 mt-1">
-                {todayEntry}
-              </span>
-            </div>
-            <div className="p-3 bg-blue-50 text-blue-500 rounded-2xl">
-              <Clock size={20} />
-            </div>
-          </div>
+              {/* Entry Card */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                    Horário de Entrada
+                  </span>
+                  <span className="text-xl font-extrabold text-stone-700 mt-1">
+                    {todayEntry}
+                  </span>
+                </div>
+                <div className="p-3 bg-blue-50 text-blue-500 rounded-2xl">
+                  <Clock size={20} />
+                </div>
+              </div>
 
-          {/* Pauses Card */}
-          <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                Pausas Hoje
-              </span>
-              <span className="text-xl font-extrabold text-stone-700 mt-1">
-                {todayPauses}
-              </span>
-            </div>
-            <div className="p-3 bg-orange-50 text-orange-500 rounded-2xl">
-              <Clock size={20} />
-            </div>
-          </div>
+              {/* Pauses Card */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                    Pausas Hoje
+                  </span>
+                  <span className="text-xl font-extrabold text-stone-700 mt-1">
+                    {todayPauses}
+                  </span>
+                </div>
+                <div className="p-3 bg-orange-50 text-orange-500 rounded-2xl">
+                  <Clock size={20} />
+                </div>
+              </div>
 
-          {/* Exit Card */}
-          <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                Horário de Saída
-              </span>
-              <span className="text-xl font-extrabold text-stone-700 mt-1">
-                {todayExit}
-              </span>
+              {/* Exit Card */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-100 shadow-xs flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                    Horário de Saída
+                  </span>
+                  <span className="text-xl font-extrabold text-stone-700 mt-1">
+                    {todayExit}
+                  </span>
+                </div>
+                <div className="p-3 bg-purple-50 text-purple-500 rounded-2xl">
+                  <Clock size={20} />
+                </div>
+              </div>
             </div>
-            <div className="p-3 bg-purple-50 text-purple-500 rounded-2xl">
-              <Clock size={20} />
-            </div>
-          </div>
-        </div>
 
-        {/* History Table */}
-        <div className="w-full bg-white rounded-3xl border border-stone-100 shadow-sm overflow-hidden mt-6">
-          <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-            <h3 className="font-bold text-stone-700 text-sm">
-              Histórico de Registros
-            </h3>
-            <span className="text-stone-400 text-xs font-semibold">
-              {timeRecords.length} dias registrados
-            </span>
-          </div>
+            {/* History Table */}
+            <div className="w-full bg-white rounded-3xl border border-stone-100 shadow-sm overflow-hidden mt-6">
+              <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+                <h3 className="font-bold text-stone-700 text-sm">
+                  Histórico de Registros
+                </h3>
+                <span className="text-stone-400 text-xs font-semibold">
+                  {timeRecords.length} dias registrados
+                </span>
+              </div>
 
-          {timeRecords.length === 0 ? (
-            <div className="py-16 flex flex-col items-center justify-center text-center gap-3 px-6">
-              <Clock size={40} className="text-stone-300" />
-              <p className="text-stone-600 font-semibold text-sm">
-                Nenhum registro de ponto encontrado
-              </p>
-              <p className="text-stone-400 text-xs max-w-xs leading-relaxed">
-                Você ainda não realizou nenhum registro de ponto no sistema. Use
-                o botão "Bater Ponto" acima para escanear o totem.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="bg-stone-50 border-b border-stone-100">
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                      Data
-                    </th>
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                      Entrada
-                    </th>
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                      Saída
-                    </th>
-                    <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                      Pausas
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {timeRecords.map((record) => (
-                    <tr
-                      key={record.id}
-                      className="hover:bg-stone-50/40 transition-colors"
-                    >
-                      <td className="py-4 px-6 font-semibold text-stone-600 text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar size={13} className="text-stone-400" />
-                          {formatDate(record.date)}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.entryTime ? "bg-blue-50 text-blue-600 border border-blue-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
+              {timeRecords.length === 0 ? (
+                <div className="py-16 flex flex-col items-center justify-center text-center gap-3 px-6">
+                  <Clock size={40} className="text-stone-300" />
+                  <p className="text-stone-600 font-semibold text-sm">
+                    Nenhum registro de ponto encontrado
+                  </p>
+                  <p className="text-stone-400 text-xs max-w-xs leading-relaxed">
+                    Você ainda não realizou nenhum registro de ponto no sistema. Use
+                    o botão "Bater Ponto" acima para escanear o totem.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr className="bg-stone-50 border-b border-stone-100">
+                        <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                          Data
+                        </th>
+                        <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                          Entrada
+                        </th>
+                        <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                          Saída
+                        </th>
+                        <th className="py-4 px-6 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                          Pausas
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {timeRecords.map((record) => (
+                        <tr
+                          key={record.id}
+                          className="hover:bg-stone-50/40 transition-colors"
                         >
-                          {formatTime(record.entryTime)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.exitTime ? "bg-purple-50 text-purple-600 border border-purple-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
-                        >
-                          {formatTime(record.exitTime)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-lg ${record.pauses && record.pauses.length > 0 ? "bg-teal-50 text-teal-600 border border-teal-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
-                        >
-                          {calculateTotalPauses(record.pauses)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <td className="py-4 px-6 font-semibold text-stone-600 text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={13} className="text-stone-400" />
+                              {formatDate(record.date)}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.entryTime ? "bg-blue-50 text-blue-600 border border-blue-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
+                            >
+                              {formatTime(record.entryTime)}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg ${record.exitTime ? "bg-purple-50 text-purple-600 border border-purple-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
+                            >
+                              {formatTime(record.exitTime)}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-lg ${record.pauses && record.pauses.length > 0 ? "bg-teal-50 text-teal-600 border border-teal-100" : "bg-stone-50 text-stone-400 border border-stone-100"}`}
+                            >
+                              {calculateTotalPauses(record.pauses)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="mt-6 w-full">
+            <CalendarTab collaboratorId={currentUser.id} readOnly={true} />
+          </div>
+        )}
 
         {/* Camera Scanner Modal Overlay */}
         {scanning && (
