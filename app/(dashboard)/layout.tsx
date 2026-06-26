@@ -113,8 +113,8 @@ export default function DashboardLayout({
     );
   }
 
-  // Se o usuário não for ADMIN, bloqueia o acesso (exceto para a tela de ponto que possui área de colaborador)
-  const isNotAdmin = user && user.role !== "ADMIN" && pathname !== "/ponto";
+  // Se o usuário não for ADMIN, bloqueia o acesso (exceto para a tela de ponto e chat que possuem área de colaborador)
+  const isNotAdmin = user && user.role !== "ADMIN" && pathname !== "/ponto" && pathname !== "/chat";
 
   return (
     <div className="flex min-h-screen w-full bg-[#EDEDED]">

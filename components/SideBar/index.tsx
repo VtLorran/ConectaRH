@@ -271,19 +271,17 @@ export default function SideBar({
             />
           </div>
           
-          {isAdmin && (
-            <div className="flex flex-col gap-2">
-              <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
-                Comunicação
-              </h1>
-              <ButtonSideBar
-                name="Chat"
-                redirect="/chat"
-                icon={<MessageCircleMore />}
-                isCollapsed={isCollapsed}
-              />
-            </div>
-          )}
+          <div className="flex flex-col gap-2">
+            <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+              Comunicação
+            </h1>
+            <ButtonSideBar
+              name="Chat"
+              redirect="/chat"
+              icon={<MessageCircleMore />}
+              isCollapsed={isCollapsed}
+            />
+          </div>
         </div>
       </div>
     </aside>

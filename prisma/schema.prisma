@@ -50,6 +50,8 @@ model User {
   workSchedules      WorkSchedule[]      @relation("UserWorkSchedules")
   timeRecords        TimeRecord[]
   documentRequests   DocumentRequest[]
+  sentMessages       Message[]           @relation("SentMessages")
+  receivedMessages   Message[]           @relation("ReceivedMessages")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -254,4 +256,17 @@ model Document {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("documents")
+}
+
+// 14. MENSAGENS DO CHAT (Temporárias)
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String   @map("sender_id")
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String   @map("receiver_id")
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("messages")
 }

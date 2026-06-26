@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 const prismaClientSingleton = () => {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 30000, // Timeout de 30 segundos para evitar travamentos infinitos
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
