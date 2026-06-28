@@ -47,6 +47,8 @@ model User {
   admissions         Admission[]
   vacations          Vacation[]          @relation("UserVacations")
   approvedVacations  Vacation[]          @relation("ApprovedVacations")
+  dayOffs            DayOff[]            @relation("UserDayOffs")
+  approvedDayOffs    DayOff[]            @relation("ApprovedDayOffs")
   workSchedules      WorkSchedule[]      @relation("UserWorkSchedules")
   timeRecords        TimeRecord[]
   documentRequests   DocumentRequest[]
@@ -160,6 +162,31 @@ model Vacation {
   updatedAt    DateTime       @updatedAt @map("updated_at")
 
   @@map("vacations")
+}
+
+// 6.2 FOLGAS DOS COLABORADORES
+enum DayOffStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model DayOff {
+  id           String       @id @default(uuid())
+  userId       String       @map("user_id")
+  user         User         @relation("UserDayOffs", fields: [userId], references: [id], onDelete: Cascade)
+  startDate    DateTime     @map("start_date")
+  endDate      DateTime     @map("end_date")
+  status       DayOffStatus @default(PENDING)
+  approvedById String?      @map("approved_by_id")
+  approvedBy   User?        @relation("ApprovedDayOffs", fields: [approvedById], references: [id], onDelete: SetNull)
+  comment      String? // Opcional (motivo, observações, justificativa, etc.)
+  
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("day_offs")
 }
 
 // 7. ESCALA/CALENDÁRIO DE TRABALHO DO COLABORADOR

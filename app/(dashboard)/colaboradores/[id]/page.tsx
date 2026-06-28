@@ -31,6 +31,7 @@ import Ferias from "./_components/Ferias";
 import CalendarTab from "./_components/Calendar";
 import ClockIn from "./_components/ClockIn";
 import PerformanceTab from "./_components/Performance";
+import Folgas from "./_components/Folgas";
 
 interface CollaboratorData {
   name: string;
@@ -57,6 +58,7 @@ type TabKey =
   | "visao-geral"
   | "admissao"
   | "ferias"
+  | "folgas"
   | "ponto"
   | "calendario"
   | "desempenho";
@@ -168,6 +170,27 @@ export default function ColaboradorDataPage() {
   const [timeRecords, setTimeRecords] = useState<any[]>([]);
 
   const [activeTab, setActiveTab] = useState<TabKey>("visao-geral");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab") as TabKey;
+      if (
+        tab &&
+        [
+          "visao-geral",
+          "admissao",
+          "ferias",
+          "folgas",
+          "ponto",
+          "calendario",
+          "desempenho",
+        ].includes(tab)
+      ) {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
 
   const dateAdmission = (() => {
     if (!collaborator) return "";
@@ -638,6 +661,10 @@ export default function ColaboradorDataPage() {
     await Promise.all([fetchVacationData(), fetchCollaboratorData(true)]);
   };
 
+  const handleDayOffUpdate = async () => {
+    await Promise.all([fetchPerformanceData(), fetchCollaboratorData(true)]);
+  };
+
   const trilhaNavegação = [
     { label: "Colaboradores", href: "/colaboradores" },
     { label: collaborator?.name || "", href: `/colaboradores/${id}` },
@@ -791,6 +818,7 @@ export default function ColaboradorDataPage() {
     { label: "Visão Geral", key: "visao-geral" },
     { label: "Documentos", key: "admissao" },
     { label: "Férias", key: "ferias" },
+    { label: "Folgas", key: "folgas" },
     { label: "Ponto", key: "ponto" },
     { label: "Calendário", key: "calendario" },
     { label: "Desempenho", key: "desempenho" },
@@ -838,6 +866,8 @@ export default function ColaboradorDataPage() {
         );
       case "ferias":
         return <Ferias collaboratorId={id as string} onUpdate={handleVacationUpdate} />;
+      case "folgas":
+        return <Folgas collaboratorId={id as string} onUpdate={handleDayOffUpdate} />;
       case "ponto":
         return <ClockIn collaboratorId={id as string} onUpdate={fetchPerformanceData} />;
       case "calendario":

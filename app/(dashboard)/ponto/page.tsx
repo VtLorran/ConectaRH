@@ -25,7 +25,6 @@ import Breadcrumb from "@/components/Breadcrumb";
 import Modal from "@/components/Modal";
 import InputField from "@/components/InputField";
 import SubmitButton from "@/components/SubmitButton";
-import CalendarTab from "@/app/(dashboard)/colaboradores/[id]/_components/Calendar";
 
 interface Pause {
   id: string;
@@ -78,7 +77,6 @@ interface PauseCategory {
 export default function PontoPage() {
   // Navigation / Tab states (Admin only)
   const [activeTab, setActiveTab] = useState<"geral" | "setor">("geral");
-  const [colabTab, setColabTab] = useState<"registro" | "escala">("registro");
   const [selectedSectorId, setSelectedSectorId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -818,48 +816,15 @@ export default function PontoPage() {
               tittle="Meu Ponto Eletrônico"
               description="Acompanhe seus horários de entrada, saída, pausas e registre seu ponto via QR Code do totem."
             />
-            {colabTab === "registro" && (
-              <button
-                onClick={startScanner}
-                className="flex items-center justify-center gap-2 bg-[linear-gradient(to_right,#3b82f6,#2563eb)] hover:brightness-110 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition-all active:scale-95 text-sm cursor-pointer shrink-0 w-full md:w-auto"
-              >
-                <QrCode size={18} />
-                Bater Ponto / Ler QR Code
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Tab selection for collaborator */}
-        <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mt-3">
-          <div className="flex bg-white p-1 rounded-2xl border border-stone-200 shadow-xs max-w-sm w-full">
             <button
-              onClick={() => setColabTab("registro")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                colabTab === "registro"
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
-              }`}
+              onClick={startScanner}
+              className="flex items-center justify-center gap-2 bg-[linear-gradient(to_right,#3b82f6,#2563eb)] hover:brightness-110 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md transition-all active:scale-95 text-sm cursor-pointer shrink-0 w-full md:w-auto"
             >
-              <Clock size={15} />
-              Registros e Logs
-            </button>
-            <button
-              onClick={() => setColabTab("escala")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                colabTab === "escala"
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
-              }`}
-            >
-              <Calendar size={15} />
-              Minha Escala
+              <QrCode size={18} />
+              Bater Ponto / Ler QR Code
             </button>
           </div>
         </div>
-
-        {colabTab === "registro" ? (
-          <>
             {/* Status Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 w-full">
               {/* Status Card */}
@@ -1007,12 +972,6 @@ export default function PontoPage() {
                 </div>
               )}
             </div>
-          </>
-        ) : (
-          <div className="mt-6 w-full">
-            <CalendarTab collaboratorId={currentUser.id} readOnly={true} />
-          </div>
-        )}
 
         {/* Camera Scanner Modal Overlay */}
         {scanning && (

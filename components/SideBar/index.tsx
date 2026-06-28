@@ -3,6 +3,7 @@ import conectaRH from "@/public/conectaRH.png";
 import {
   BellIcon,
   Building2,
+  Calendar,
   CheckCircle,
   FileCheckCorner,
   FileSpreadsheet,
@@ -13,6 +14,7 @@ import {
   UserRoundPlus,
   Users2,
   Palmtree,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   X,
@@ -263,6 +265,18 @@ export default function SideBar({
                   name="Central de Férias"
                   redirect="/ferias"
                   icon={<Palmtree />}
+                  isCollapsed={isCollapsed}
+                />
+                <ButtonSideBar
+                  name="Central de Folgas"
+                  redirect="/folgas"
+                  icon={<CalendarDays />}
+                  isCollapsed={isCollapsed}
+                />
+                <ButtonSideBar
+                  name="Minha Escala"
+                  redirect="/escala"
+                  icon={<Calendar />}
                   isCollapsed={isCollapsed}
                 />
                 <ButtonSideBar
