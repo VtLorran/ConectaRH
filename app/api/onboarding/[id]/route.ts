@@ -123,6 +123,8 @@ export async function PATCH(
 
     const existingAnswers = (docRequest.answers as any[]) || [];
     let newlyRejectedAnswer: { name: string; feedback: string | null } | null = null;
+    let userHasSentResponse = false;
+    let responseType = "text";
 
     const mergedAnswers = answers.map((newAns: any) => {
       const oldAns = existingAnswers.find((oa: any) => oa.name === newAns.name);
@@ -139,13 +141,17 @@ export async function PATCH(
           return oldAns;
         }
         
-        // If value changed, set status to pending and reset feedback
+        // If value changed, set status to submitted and reset feedback
         const hasValueChanged = oldAns ? oldAns.value !== resolvedValue : resolvedValue !== null;
         if (hasValueChanged) {
+          userHasSentResponse = true;
+          if (newAns.type === "file") {
+            responseType = "file";
+          }
           return {
             ...newAns,
             value: resolvedValue,
-            status: "pending",
+            status: "submitted",
             feedback: null
           };
         } else {
@@ -181,6 +187,31 @@ export async function PATCH(
         answers: mergedAnswers,
       },
     });
+
+    if (authUser.role !== "ADMIN" && userHasSentResponse) {
+      const admins = await prisma.user.findMany({
+        where: { role: "ADMIN" },
+        select: { id: true },
+      });
+      const userName = docRequest.user?.name || "Um colaborador";
+      const description = responseType === "file"
+        ? `${userName} enviou um documento de onboarding. Clique para visualizar.`
+        : `${userName} respondeu uma solicitação de onboarding. Clique para visualizar.`;
+
+      await Promise.all(
+        admins.map((admin) =>
+          prisma.notification.create({
+            data: {
+              userId: admin.id,
+              title: "Resposta de Onboarding",
+              description,
+              link: `/onboarding?collaboratorId=${docRequest.userId}`,
+              read: false,
+            },
+          })
+        )
+      );
+    }
 
     if (newlyRejectedAnswer && docRequest.user) {
       const rejectedAns = newlyRejectedAnswer as { name: string; feedback: string | null };

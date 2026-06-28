@@ -139,6 +139,17 @@ export async function POST(request: Request) {
       },
     });
 
+    // Criar notificação para o colaborador (USER)
+    await prisma.notification.create({
+      data: {
+        userId,
+        title: "Nova solicitação de onboarding",
+        description: "O RH solicitou uma nova etapa do seu onboarding. Clique para visualizar.",
+        link: "/onboarding",
+        read: false,
+      },
+    });
+
     return NextResponse.json({ success: true, data: newRequest });
   } catch (error) {
     console.error("Erro na rota POST /api/onboarding:", error);

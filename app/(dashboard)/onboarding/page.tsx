@@ -25,6 +25,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import Modal from "@/components/Modal";
 import InputField from "@/components/InputField";
 import SubmitButton from "@/components/SubmitButton";
+import UserOnboarding from "./_components/UserOnboarding";
 
 interface Requirement {
   name: string;
@@ -64,6 +65,50 @@ interface Collaborator {
 }
 
 export default function OnboardingPage() {
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchRole() {
+      try {
+        const res = await fetch("/api/auth/me");
+        const json = await res.json();
+        if (json.success && json.data) {
+          setUserRole(json.data.role);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar perfil:", err);
+      } finally {
+        setRoleLoading(false);
+      }
+    }
+    fetchRole();
+  }, []);
+
+  // Se ainda estiver carregando a role, mostra loading
+  if (roleLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <p className="text-stone-500 font-semibold text-sm animate-pulse">
+            Carregando...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se for USER, renderiza a Central de Onboarding do colaborador
+  if (userRole !== "ADMIN") {
+    return <UserOnboarding />;
+  }
+
+  // Se for ADMIN, renderiza a interface administrativa
+  return <AdminOnboarding />;
+}
+
+function AdminOnboarding() {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [sectors, setSectors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

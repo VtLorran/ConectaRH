@@ -55,7 +55,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!loading && user && user.role !== "ADMIN") {
-      const allowedRoutes = ["/dashboard", "/chat", "/ponto", "/perfil", "/configuracoes", "/notificacoes", "/ferias", "/folgas", "/escala"];
+      const allowedRoutes = ["/dashboard", "/chat", "/ponto", "/perfil", "/configuracoes", "/notificacoes", "/ferias", "/folgas", "/escala", "/onboarding"];
       if (pathname === "/") {
         router.replace("/dashboard");
       } else if (!allowedRoutes.some(route => pathname === route || pathname.startsWith(route + "/"))) {
@@ -270,7 +270,7 @@ export default function DashboardLayout({
     );
   }
 
-  const isAllowed = !user || user.role === "ADMIN" || ["/dashboard", "/chat", "/ponto", "/perfil", "/configuracoes", "/notificacoes", "/ferias", "/folgas", "/escala"].some(route => pathname === route || pathname.startsWith(route + "/"));
+  const isAllowed = !user || user.role === "ADMIN" || ["/dashboard", "/chat", "/ponto", "/perfil", "/configuracoes", "/notificacoes", "/ferias", "/folgas", "/escala", "/onboarding"].some(route => pathname === route || pathname.startsWith(route + "/"));
 
   return (
     <div className="flex min-h-screen w-full bg-[#EDEDED]">

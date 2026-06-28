@@ -285,6 +285,12 @@ export default function SideBar({
                   icon={<CheckCircle />}
                   isCollapsed={isCollapsed}
                 />
+                <ButtonSideBar
+                  name="Central de Onboarding"
+                  redirect="/onboarding"
+                  icon={<FileCheckCorner />}
+                  isCollapsed={isCollapsed}
+                />
               </div>
 
               <div className="flex flex-col gap-2">
