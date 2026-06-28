@@ -53,11 +53,71 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    // Carrega o estado de colapsado do localStorage no lado do cliente
-    const savedCollapsed = localStorage.getItem("sidebar-collapsed");
-    if (savedCollapsed === "true") {
-      setIsSidebarCollapsed(true);
-    }
+    const handleSidebarPref = () => {
+      const pref = localStorage.getItem("sidebar-preference") || "default";
+      if (pref === "expanded") {
+        setIsSidebarCollapsed(false);
+      } else if (pref === "collapsed") {
+        setIsSidebarCollapsed(true);
+      } else {
+        const savedCollapsed = localStorage.getItem("sidebar-collapsed");
+        setIsSidebarCollapsed(savedCollapsed === "true");
+      }
+    };
+
+    handleSidebarPref();
+    window.addEventListener("sidebar-pref-changed", handleSidebarPref);
+    window.addEventListener("storage", handleSidebarPref);
+
+    return () => {
+      window.removeEventListener("sidebar-pref-changed", handleSidebarPref);
+      window.removeEventListener("storage", handleSidebarPref);
+    };
+  }, []);
+
+  useEffect(() => {
+    const applyTheme = (t: string) => {
+      const root = document.documentElement;
+      if (t === "dark") {
+        root.classList.add("dark");
+      } else if (t === "light") {
+        root.classList.remove("dark");
+      } else {
+        // Auto
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        if (systemTheme === "dark") {
+          root.classList.add("dark");
+        } else {
+          root.classList.remove("dark");
+        }
+      }
+    };
+
+    const applyFontSize = (s: string) => {
+      const root = document.documentElement;
+      root.classList.remove("font-size-small", "font-size-medium", "font-size-large");
+      root.classList.add(`font-size-${s}`);
+    };
+
+    // Load initial
+    const savedTheme = localStorage.getItem("theme-preference") || "auto";
+    const savedFontSize = localStorage.getItem("font-size-preference") || "medium";
+    applyTheme(savedTheme);
+    applyFontSize(savedFontSize);
+
+    // Listen to real-time events
+    const handlePrefChange = () => {
+      applyTheme(localStorage.getItem("theme-preference") || "auto");
+      applyFontSize(localStorage.getItem("font-size-preference") || "medium");
+    };
+
+    window.addEventListener("appearance-pref-changed", handlePrefChange);
+    window.addEventListener("storage", handlePrefChange);
+
+    return () => {
+      window.removeEventListener("appearance-pref-changed", handlePrefChange);
+      window.removeEventListener("storage", handlePrefChange);
+    };
   }, []);
 
   const toggleSidebarCollapse = () => {
@@ -91,6 +151,90 @@ export default function DashboardLayout({
       document.documentElement.style.height = "";
     };
   }, [isMobileSidebarOpen]);
+
+  // Efeito global para ouvir a chegada de novas notificações e tocar o som
+  useEffect(() => {
+    if (!user) return;
+
+    // Síntese programática de som de notificação para garantir 100% de funcionamento sem assets estáticos
+    const playChime = () => {
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+        gain1.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.25);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(880.00, ctx.currentTime + 0.08); // A5
+        gain2.gain.setValueAtTime(0, ctx.currentTime);
+        gain2.gain.setValueAtTime(0.08, ctx.currentTime + 0.08);
+        gain2.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.45);
+
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.25);
+        osc2.start(ctx.currentTime + 0.08);
+        osc2.stop(ctx.currentTime + 0.45);
+      } catch (err) {
+        console.error("Erro ao tocar som de notificação:", err);
+      }
+    };
+
+    const checkNewNotifications = async () => {
+      // Só checa se notificações estão ligadas nas preferências
+      const isNotificationsEnabled = localStorage.getItem("notifications-preference") !== "false";
+      if (!isNotificationsEnabled) return;
+
+      try {
+        const res = await fetch("/api/notifications/unread-count");
+        const json = await res.json();
+        if (json.success) {
+          const currentCount = json.unreadCount;
+          const lastCountStr = sessionStorage.getItem("last-notification-count");
+          
+          if (lastCountStr !== null) {
+            const lastCount = Number(lastCountStr);
+            if (currentCount > lastCount) {
+              playChime();
+              window.dispatchEvent(new Event("notifications-updated"));
+            }
+          }
+          sessionStorage.setItem("last-notification-count", String(currentCount));
+        }
+      } catch (err) {
+        console.error("Erro ao checar novas notificações:", err);
+      }
+    };
+
+    const initNotificationsCount = async () => {
+      try {
+        const res = await fetch("/api/notifications/unread-count");
+        const json = await res.json();
+        if (json.success) {
+          sessionStorage.setItem("last-notification-count", String(json.unreadCount));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    initNotificationsCount();
+
+    const interval = setInterval(checkNewNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   async function handleLogout() {
     try {

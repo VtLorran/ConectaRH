@@ -52,6 +52,7 @@ model User {
   documentRequests   DocumentRequest[]
   sentMessages       Message[]           @relation("SentMessages")
   receivedMessages   Message[]           @relation("ReceivedMessages")
+  notifications      Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -269,4 +270,50 @@ model Message {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("messages")
+}
+
+// 15. DADOS DA EMPRESA (Persistidos no Banco)
+model CompanyData {
+  id                 String   @id @default(uuid())
+  razaoSocial        String
+  nomeFantasia       String
+  cnpj               String   @unique
+  emailCorporativo   String?
+  telefone           String?
+  cep                String?
+  cidade             String?
+  estado             String?
+  pais               String?
+  responsavelNome    String?
+  responsavelEmail   String?
+  inscricaoEstadual  String?
+  inscricaoMunicipal String?
+  site               String?
+  whatsapp           String?
+  dataFundacao       String?
+  porte              String?
+  segmento           String?
+  instagram          String?
+  linkedin           String?
+  primaryColor       String?
+  logoPreview        String?  // Armazena a imagem em formato base64/URL
+
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("company_data")
+}
+
+// 16. NOTIFICAÇÕES DO SISTEMA
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  read        Boolean  @default(false)
+  link        String?  // Opcional: link para redirecionamento
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
 }

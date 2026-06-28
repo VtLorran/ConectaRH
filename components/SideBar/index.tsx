@@ -21,11 +21,13 @@ import Image from "next/image";
 import Link from "next/link";
 import Tooltip from "@/components/Tooltip";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface PropsButtonSideBar {
   icon: React.ReactNode;
   name: string;
   redirect: string;
+  unreadCount?: number;
 }
 
 export function ButtonIconSideBar({
@@ -33,14 +35,22 @@ export function ButtonIconSideBar({
   name,
   redirect,
   isCollapsed,
+  unreadCount = 0,
 }: PropsButtonSideBar & { isCollapsed?: boolean }) {
+  const hasUnread = name === "Notificações" && unreadCount > 0;
+  
   return (
     <Link
       href={redirect}
       className="relative flex items-center justify-center p-3 rounded-lg text-slate-300 hover:text-white transition-all duration-200 group"
     >
-      <div className="text-xl text-slate-600 group-hover:text-blue-400 transition-colors">
+      <div className="text-xl text-slate-600 group-hover:text-blue-400 transition-colors relative">
         {icon}
+        {hasUnread && (
+          <span className="absolute -top-1.5 -right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white animate-pulse">
+            {unreadCount}
+          </span>
+        )}
       </div>
 
       {/* Tooltip no mobile (sempre embaixo) ou no desktop expandido */}
@@ -118,6 +128,35 @@ export default function SideBar({
   isMobileOpen = false,
   onCloseMobile,
 }: SideBarProps) {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await fetch("/api/notifications/unread-count");
+      const json = await res.json();
+      if (json.success) {
+        setUnreadCount(json.unreadCount);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar quantidade de notificações:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    
+    // Escutar por atualizações locais de notificações
+    window.addEventListener("notifications-updated", fetchUnreadCount);
+    
+    // Checar periodicamente a cada 15 segundos
+    const interval = setInterval(fetchUnreadCount, 15000);
+    
+    return () => {
+      window.removeEventListener("notifications-updated", fetchUnreadCount);
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <aside
       className={`
@@ -185,6 +224,7 @@ export default function SideBar({
             redirect="/notificacoes"
             icon={<BellIcon />}
             isCollapsed={isCollapsed}
+            unreadCount={unreadCount}
           />
           <ButtonIconSideBar
             name="Perfil"

@@ -49,3 +49,129 @@ body {
 .animate-fade-in {
   animation: fade-in 0.3s ease-out forwards;
 }
+
+.animate-spin-slow {
+  animation: spin 8s linear infinite;
+}
+
+/* Smooth transitions */
+html, body, div, header, aside, main, section, button, input, select, textarea {
+  transition: background-color 0.25s ease-out, border-color 0.25s ease-out, color 0.25s ease-out;
+}
+
+/* Font size settings */
+html.font-size-small {
+  font-size: 13.5px !important;
+}
+html.font-size-medium {
+  font-size: 16px !important;
+}
+html.font-size-large {
+  font-size: 18.5px !important;
+}
+
+/* Dark theme definitions */
+html.dark, html.dark body {
+  background-color: #0f172a !important; /* Tailwind slate-900 */
+  color: #f1f5f9 !important;
+}
+
+/* Override background of main wrapper in DashboardLayout */
+html.dark .bg-\[\#EDEDED\] {
+  background-color: #090d16 !important; /* darker slate */
+}
+
+/* Sidebar and Header */
+html.dark aside,
+html.dark header,
+html.dark .bg-white,
+html.dark .bg-stone-50,
+html.dark .bg-stone-50\/50,
+html.dark .bg-stone-50\/20,
+html.dark .bg-blue-50\/20 {
+  background-color: #1e293b !important; /* Tailwind slate-800 */
+  color: #f8fafc !important;
+  border-color: #334155 !important; /* Tailwind slate-700 */
+}
+
+/* Text overrides */
+html.dark .text-stone-900,
+html.dark .text-stone-850,
+html.dark .text-stone-800,
+html.dark .text-stone-750,
+html.dark .text-stone-700,
+html.dark .text-stone-600 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-stone-500,
+html.dark .text-stone-400 {
+  color: #94a3b8 !important; /* Tailwind slate-400 */
+}
+
+/* Border overrides */
+html.dark .border,
+html.dark .border-stone-200,
+html.dark .border-stone-200\/80,
+html.dark .border-stone-100,
+html.dark .border-stone-150,
+html.dark .border-stone-250\/50 {
+  border-color: #334155 !important;
+}
+
+/* Inputs, Selects, Textareas */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important; /* slate-900 inputs */
+  color: #f1f5f9 !important;
+  border-color: #475569 !important; /* slate-600 */
+}
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #3b82f6 !important; /* blue-500 */
+}
+
+/* Hover effects */
+html.dark .hover\:bg-stone-50:hover,
+html.dark .hover\:bg-stone-100:hover,
+html.dark .hover\:bg-stone-150:hover,
+html.dark .group:hover {
+  background-color: #334155 !important;
+}
+
+/* Specific component tweaks */
+html.dark .text-blue-600,
+html.dark .text-blue-700 {
+  color: #60a5fa !important; /* light blue for dark mode */
+}
+html.dark .bg-blue-50,
+html.dark .bg-blue-600\/10 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #93c5fd !important;
+}
+html.dark .border-blue-200,
+html.dark .border-blue-200\/50 {
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+html.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #a7f3d0 !important;
+}
+html.dark .bg-rose-50,
+html.dark .bg-rose-50\/20 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  color: #fecdd3 !important;
+}
+html.dark .bg-violet-50 {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: #ddd6fe !important;
+}
+
+/* Active tab in config page (vertical layout menu override) */
+html.dark .bg-blue-600 {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
