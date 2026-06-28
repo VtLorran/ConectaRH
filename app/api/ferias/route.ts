@@ -204,6 +204,47 @@ export async function POST(request: Request) {
       }
     }
 
+    // Criar notificações correspondentes
+    const formatDate = (d: Date) => {
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+    const formattedStart = formatDate(start);
+    const formattedEnd = formatDate(end);
+
+    if (user.role === "ADMIN") {
+      // RH cadastrou férias manualmente, notifica o USER
+      await prisma.notification.create({
+        data: {
+          userId,
+          title: "Foi adicionado um novo período de férias para você.",
+          description: `Período: ${formattedStart} até ${formattedEnd}`,
+          link: "/ferias",
+          read: false,
+        },
+      });
+    } else {
+      // USER solicitou férias, notifica todos os ADMINs
+      const admins = await prisma.user.findMany({
+        where: { role: "ADMIN" },
+      });
+      await Promise.all(
+        admins.map((admin) =>
+          prisma.notification.create({
+            data: {
+              userId: admin.id,
+              title: `${newVacation.user.name} solicitou férias.`,
+              description: `Período: ${formattedStart} até ${formattedEnd}`,
+              link: `/colaboradores/${userId}`,
+              read: false,
+            },
+          })
+        )
+      );
+    }
+
     return NextResponse.json({ success: true, data: newVacation });
   } catch (error) {
     console.error("Erro na rota POST /api/ferias:", error);

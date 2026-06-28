@@ -56,6 +56,22 @@ interface Toast {
 export default function SettingsPage() {
   // Controle da categoria selecionada
   const [activeTab, setActiveTab] = useState<string>("aparencia");
+  const [user, setUser] = useState<{ role: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await fetch("/api/auth/me");
+        const json = await res.json();
+        if (json.success && json.data) {
+          setUser(json.data);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar usuário:", err);
+      }
+    }
+    fetchUser();
+  }, []);
 
   // Toasts flutuantes
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -340,7 +356,7 @@ export default function SettingsPage() {
     { id: "preferencias", label: "Preferências", icon: Zap, desc: "Comportamento do sistema" },
     { id: "suporte", label: "Suporte", icon: HelpCircle, desc: "Ajuda e chamados" },
     { id: "sobre", label: "Sobre", icon: Info, desc: "Detalhes do sistema" },
-    { id: "dados", label: "Dados da Empresa", icon: Building2, desc: "Configurações corporativas", optional: true },
+    ...(user?.role === "ADMIN" ? [{ id: "dados", label: "Dados da Empresa", icon: Building2, desc: "Configurações corporativas", optional: true }] : []),
     { id: "conta", label: "Gerenciar Conta", icon: User, desc: "Ações e sessões" }
   ];
 
@@ -1233,7 +1249,7 @@ export default function SettingsPage() {
             )}
 
             {/* ================= DADOS DA EMPRESA ================= */}
-            {activeTab === "dados" && (
+            {activeTab === "dados" && user?.role === "ADMIN" && (
               <form onSubmit={saveCompanyData} className="space-y-6 flex-1">
                 <div>
                   <h2 className="text-lg font-bold text-stone-850 flex items-center gap-2 border-b border-stone-100 pb-3">

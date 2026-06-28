@@ -172,6 +172,29 @@ export async function PATCH(
       }
     }
 
+    // Criar notificações correspondentes se houver alteração de status
+    if (status === "APPROVED") {
+      await prisma.notification.create({
+        data: {
+          userId: updatedVacation.userId,
+          title: "Sua solicitação de férias foi aprovada.",
+          description: comment ? `Observação: ${comment}` : `Período de férias aprovado com sucesso.`,
+          link: "/ferias",
+          read: false,
+        },
+      });
+    } else if (status === "REJECTED") {
+      await prisma.notification.create({
+        data: {
+          userId: updatedVacation.userId,
+          title: "Sua solicitação de férias foi recusada.",
+          description: comment ? `Motivo: ${comment}` : `Sua solicitação foi analisada e recusada pelo RH.`,
+          link: "/ferias",
+          read: false,
+        },
+      });
+    }
+
     return NextResponse.json({ success: true, data: updatedVacation });
   } catch (error: any) {
     console.error(`Erro na rota PATCH /api/ferias/[id]:`, error);

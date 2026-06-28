@@ -5,7 +5,7 @@ import SideBar from "@/components/SideBar";
 import Footer from "@/components/Footer";
 import { Loader2, Construction, User, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface UserProfile {
   id: string;
@@ -25,6 +25,7 @@ export default function DashboardLayout({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchProfile() {
@@ -51,6 +52,17 @@ export default function DashboardLayout({
 
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (!loading && user && user.role !== "ADMIN") {
+      const allowedRoutes = ["/dashboard", "/chat", "/ponto", "/perfil", "/configuracoes", "/notificacoes", "/ferias"];
+      if (pathname === "/") {
+        router.replace("/dashboard");
+      } else if (!allowedRoutes.some(route => pathname === route || pathname.startsWith(route + "/"))) {
+        router.replace("/dashboard");
+      }
+    }
+  }, [user, pathname, loading, router]);
 
   useEffect(() => {
     const handleSidebarPref = () => {
@@ -258,8 +270,7 @@ export default function DashboardLayout({
     );
   }
 
-  // Se o usuário não for ADMIN, bloqueia o acesso (exceto para a tela de ponto e chat que possuem área de colaborador)
-  const isNotAdmin = user && user.role !== "ADMIN" && pathname !== "/ponto" && pathname !== "/chat";
+  const isAllowed = !user || user.role === "ADMIN" || ["/dashboard", "/chat", "/ponto", "/perfil", "/configuracoes", "/notificacoes", "/ferias"].some(route => pathname === route || pathname.startsWith(route + "/"));
 
   return (
     <div className="flex min-h-screen w-full bg-[#EDEDED]">
@@ -312,55 +323,10 @@ export default function DashboardLayout({
         <main
           className={`flex-1 p-5 transition-all duration-300 ease-in-out ml-0 flex flex-col justify-between gap-6
             ${isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64"}
-            ${isNotAdmin ? "items-center justify-center bg-slate-50/50" : ""}
           `}
         >
-          <div className={`w-full ${!isNotAdmin ? "flex-1 flex flex-col" : "flex items-center justify-center flex-1"}`}>
-            {isNotAdmin ? (
-              <div className="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-stone-100 p-10 flex flex-col items-center text-center gap-6 animate-fade-in">
-                <div className="p-5 bg-blue-50 text-blue-600 rounded-3xl animate-bounce">
-                  <Construction className="h-14 w-14" />
-                </div>
-                
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-bold text-stone-800">
-                    Olá, {user?.name.split(" ")[0]}! 👋
-                  </h1>
-                  <h2 className="text-lg font-semibold text-blue-600/90">
-                    {pathname === "/perfil" 
-                      ? "Perfil do Colaborador em Desenvolvimento" 
-                      : "Área do Colaborador em Desenvolvimento"}
-                  </h2>
-                  <p className="text-sm text-stone-500 leading-relaxed pt-2">
-                    {pathname === "/perfil" 
-                      ? "A tela de visualização e edição do seu perfil de colaborador está sendo criada. Em breve você poderá gerenciar seus dados cadastrais, enviar novos documentos e atualizar sua foto por aqui!"
-                      : "A sua área de trabalho como colaborador ainda está sendo preparada pela nossa equipe de tecnologia. Em breve, você terá acesso a todas as suas ferramentas, holerites, ponto eletrônico e benefícios por aqui!"
-                    }
-                  </p>
-                </div>
-
-                <div className="w-full flex flex-col sm:flex-row gap-3 pt-4">
-                  {pathname !== "/perfil" && (
-                    <Link
-                      href="/perfil"
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3.5 px-6 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer text-sm"
-                    >
-                      <User className="h-4 w-4" />
-                      Verificar Perfil
-                    </Link>
-                  )}
-                  <button
-                    onClick={handleLogout}
-                    className="flex-1 flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/50 font-semibold py-3.5 px-6 rounded-xl transition-all active:scale-95 cursor-pointer text-sm"
-                  >
-                    <LogOut className="h-4 w-4" strokeWidth={2.5} />
-                    Sair da Conta
-                  </button>
-                </div>
-              </div>
-            ) : (
-              children
-            )}
+          <div className="w-full flex-1 flex flex-col">
+            {isAllowed ? children : null}
           </div>
           <Footer />
         </main>

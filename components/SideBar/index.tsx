@@ -241,6 +241,52 @@ export default function SideBar({
         </div>
 
         <div className={`w-full flex flex-col gap-5 p-5 ${isCollapsed ? "lg:px-2 lg:pb-5" : ""}`}>
+          {!isAdmin && (
+            <>
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Visão Geral
+                </h1>
+                <ButtonSideBar
+                  name="Dashboard"
+                  redirect="/dashboard"
+                  icon={<LayoutDashboard />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Serviços
+                </h1>
+                <ButtonSideBar
+                  name="Central de Férias"
+                  redirect="/ferias"
+                  icon={<Palmtree />}
+                  isCollapsed={isCollapsed}
+                />
+                <ButtonSideBar
+                  name="Ponto"
+                  redirect="/ponto"
+                  icon={<CheckCircle />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Comunicação
+                </h1>
+                <ButtonSideBar
+                  name="Chat"
+                  redirect="/chat"
+                  icon={<MessageCircleMore />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
+            </>
+          )}
+
           {isAdmin && (
             <>
               <div className="flex flex-col gap-2">
@@ -296,32 +342,32 @@ export default function SideBar({
                   isCollapsed={isCollapsed}
                 />
               </div>
+
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Operação
+                </h1>
+                <ButtonSideBar
+                  name="Ponto"
+                  redirect="/ponto"
+                  icon={<CheckCircle />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
+                  Comunicação
+                </h1>
+                <ButtonSideBar
+                  name="Chat"
+                  redirect="/chat"
+                  icon={<MessageCircleMore />}
+                  isCollapsed={isCollapsed}
+                />
+              </div>
             </>
           )}
-          
-          <div className="flex flex-col gap-2">
-            <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
-              Operação
-            </h1>
-            <ButtonSideBar
-              name="Ponto"
-              redirect="/ponto"
-              icon={<CheckCircle />}
-              isCollapsed={isCollapsed}
-            />
-          </div>
-          
-          <div className="flex flex-col gap-2">
-            <h1 className={`text-stone-800/50 font-bold text-sm transition-all duration-300 px-3 ${isCollapsed ? "block lg:hidden" : "block"}`}>
-              Comunicação
-            </h1>
-            <ButtonSideBar
-              name="Chat"
-              redirect="/chat"
-              icon={<MessageCircleMore />}
-              isCollapsed={isCollapsed}
-            />
-          </div>
         </div>
       </div>
     </aside>
