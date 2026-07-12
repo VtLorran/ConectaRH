@@ -1,29 +1,119 @@
-# 🚀 ConectaRH
+# ConectaRH
 
-> Transformando a gestão de pessoas e conectando talentos ao sucesso da empresa.
 
-[![Licença](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Status do Projeto](https://img.shields.io/badge/Status-Em%20Desenvolvimento-green)](#)
+![ConectaRH](./public/preview.png)
 
-O **ConectaRH** é uma plataforma inovadora de gestão de Recursos Humanos (HRTech) projetada para centralizar, simplificar e otimizar a relação entre o departamento de RH e os colaboradores. O sistema oferece desde o onboarding de novos funcionários até a gestão de ponto, folha de pagamento e avaliações de desempenho.
+<p align="center">
+  <strong>Plataforma inteligente de gestão de Recursos Humanos</strong>
+</p>
 
----
-
-## ✨ Funcionalidades
-
-* **👤 Painel do Colaborador:** Acesso individual para consulta de holerites, espelho de ponto e banco de horas.
-* **⏰ Gestão de Ponto Eletrônico:** Registro de entrada, pausas e saída de forma intuitiva.
-* **📈 Avaliação de Desempenho:** Módulo para feedbacks 360º, autoavaliação e acompanhamento de metas (OKRs).
-* **🤝 Recrutamento e Seleção (ATS):** Cadastro de vagas, triagem de currículos e gestão do funil de candidatos.
-* **🏢 Gestão de Benefícios:** Controle de vales, plano de saúde e benefícios flexíveis.
-* **📊 Dashboards e Relatórios:** Gráficos interativos para a diretoria acompanhar indicadores importantes do setor.
+<p align="center">
+  Sistema desenvolvido para otimizar processos internos de RH, facilitando o gerenciamento de colaboradores, onboarding, solicitações e comunicação organizacional.
+</p>
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## Sobre o Projeto
 
-O projeto foi construído com foco em performance e tipagem segura, utilizando as seguintes tecnologias:
+O **ConectaRH** é uma plataforma web voltada para empresas que desejam centralizar e modernizar seus processos de Recursos Humanos.
 
-* **[Next.js](https://nextjs.org/)** - Framework React utilizado para a interface de usuário (Front-end) e para a construção das rotas de API (Back-end).
-* **[TypeScript](https://www.typescriptlang.org/)** - Superconjunto de JavaScript que adiciona tipagem estática, garantindo um código mais seguro e escalável.
-* **[Node.js](https://nodejs.org/)** - Ambiente de execução JavaScript.
+A aplicação permite que gestores acompanhem colaboradores, realizem processos de admissão, controlem solicitações internas e tenham uma visão organizada das informações da equipe.
+
+O objetivo é proporcionar uma experiência simples, eficiente e escalável para empresas que buscam digitalizar sua gestão de pessoas.
+
+---
+
+## Funcionalidades
+
+### Gestão de colaboradores
+- Cadastro e gerenciamento de funcionários;
+- Visualização de informações profissionais;
+- Organização dos dados da equipe.
+
+### Onboarding de funcionários
+- Processo digital de integração;
+- Acompanhamento das etapas de admissão;
+- Organização de documentos e informações iniciais.
+
+### Dashboard administrativo
+- Visão geral dos colaboradores;
+- Indicadores importantes;
+- Acompanhamento dos processos internos.
+
+### Solicitações internas
+- Solicitação de afastamentos e férias;
+- Fluxo de aprovação;
+- Controle do histórico de solicitações.
+
+### Comunicação interna
+- Sistema de comunicação entre usuários;
+- Centralização de informações importantes.
+
+---
+
+# Tecnologias utilizadas
+
+## Front-end
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+
+## Back-end
+- Node.js
+- Next.js API Routes
+
+## Banco de Dados
+- Prisma ORM
+- PostgreSQL
+
+## Ferramentas
+- Git
+- GitHub
+- Vercel
+
+---
+
+# Estrutura do Projeto
+
+```text
+ConectaRH/
+│
+├── app/          # Rotas e páginas da aplicação Next.js (App Router)
+│
+├── components/   # Componentes reutilizáveis da interface (UI)
+│
+├── lib/          # Funções auxiliares, utilitários e configurações
+│
+├── prisma/       # Schema e arquivos de migração do banco de dados (Prisma)
+│
+├── public/       # Arquivos estáticos (imagens, fontes, etc.)
+│
+├── package.json  # Dependências, metadados e scripts do projeto
+│
+└── README.md     # Documentação do projeto
+
+``
+
+## Deploy
+
+**Projeto publicado:** [Conecta RH - Beta](https://conecta-rh-beta.vercel.app)
+
+---
+
+## Segurança
+
+O projeto utiliza boas práticas de desenvolvimento para garantir a integridade e proteção da aplicação:
+
+* Controle de acesso;
+* Validação de dados;
+* Separação de responsabilidades;
+* Gerenciamento seguro de variáveis de ambiente.
+
+---
+
+## 👨‍💻 Desenvolvedor
+
+**Vítor Lorran** > *Projeto desenvolvido com foco em soluções modernas para gestão empresarial e transformação digital.*
+
+---
