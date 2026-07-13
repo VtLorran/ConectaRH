@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import bcrypt from "bcrypt";
 
 export async function GET(request: Request) {
   try {
@@ -86,3 +87,101 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const data = await request.json();
+    const { name, cpf, password, jobPositionId } = data;
+
+    if (!name || !cpf || !password) {
+      return NextResponse.json(
+        { success: false, message: "Nome, CPF e senha são obrigatórios." },
+        { status: 400 }
+      );
+    }
+
+    const cleanCpf = cpf.replace(/\D/g, "");
+    if (cleanCpf.length !== 11) {
+      return NextResponse.json(
+        { success: false, message: "CPF inválido. Deve conter 11 dígitos." },
+        { status: 400 }
+      );
+    }
+
+    const formattedCpf = `${cleanCpf.slice(0, 3)}.${cleanCpf.slice(3, 6)}.${cleanCpf.slice(6, 9)}-${cleanCpf.slice(9, 11)}`;
+    const email = `${cleanCpf}@conecta.rh`;
+
+    // 1. Validar se já existe um colaborador ativo com este CPF ou E-mail no sistema
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { cpf: cleanCpf },
+          { cpf: formattedCpf },
+          { email: email },
+        ],
+      },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { success: false, message: "Não foi possível cadastrar pois já existe um colaborador com este CPF no sistema." },
+        { status: 400 }
+      );
+    }
+
+    // 2. Buscar o cargo e setor para definir o perfil de acesso dinamicamente se fornecido
+    let derivedRole: "ADMIN" | "USER" = "USER";
+    if (jobPositionId) {
+      const jobPosition = await prisma.jobPosition.findUnique({
+        where: { id: jobPositionId },
+        include: { department: true },
+      });
+      if (jobPosition) {
+        const normalizedDept = jobPosition.department.name.trim().toUpperCase();
+        derivedRole = (
+          normalizedDept === "RH" ||
+          normalizedDept === "RECURSOS HUMANOS" ||
+          normalizedDept === "DP" ||
+          normalizedDept === "DEPARTAMENTO PESSOAL"
+        ) ? "ADMIN" : "USER";
+      }
+    }
+
+    // 3. Hash da senha
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 4. Criar usuário no banco
+    const newUser = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email,
+        cpf: cleanCpf,
+        password: hashedPassword,
+        role: derivedRole,
+        status: "ACTIVE",
+        jobPositionId: jobPositionId || null,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Usuário criado com sucesso de forma manual!",
+        data: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          cpf: newUser.cpf,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Erro na API de cadastro manual de colaborador:", error);
+    return NextResponse.json(
+      { success: false, message: "Erro interno no servidor." },
+      { status: 500 }
+    );
+  }
+}
+

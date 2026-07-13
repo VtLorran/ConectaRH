@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { ReviewList } from "@/components/List";
-import { CheckCircle, File, RefreshCcw, Plus, Loader2, Send } from "lucide-react";
+import { CheckCircle, File, RefreshCcw, Plus, Loader2, Send, UserRound } from "lucide-react";
 import AdmissionModal from "@/components/AdmissionModal";
+import ManualUserModal from "@/components/ManualUserModal";
 
 interface Stats {
   underReview: number;
@@ -38,6 +39,7 @@ export default function AdmissaoPage() {
   const [invitedCandidates, setInvitedCandidates] = useState<Candidate[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -133,14 +135,26 @@ export default function AdmissaoPage() {
           </p>
         </div>
 
-        {/* Botão de Nova Admissão */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-[#3B82F6] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md transition-all active:scale-95 cursor-pointer w-full md:w-auto"
-        >
-          <Plus className="h-5 w-5" strokeWidth={2.5} />
-          Nova Admissão
-        </button>
+        {/* Botões de Ação */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          {/* Botão de Cadastro Manual */}
+          <button
+            onClick={() => setIsManualModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-[#3B82F6] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md transition-all active:scale-95 cursor-pointer w-full sm:w-auto"
+          >
+            <UserRound className="h-5 w-5" strokeWidth={2.5} />
+            Cadastrar Manualmente
+          </button>
+
+          {/* Botão de Nova Admissão */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-[#3B82F6] hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md transition-all active:scale-95 cursor-pointer w-full sm:w-auto"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+            Nova Admissão
+          </button>
+        </div>
       </div>
 
       {/* Cards Superiores */}
@@ -303,6 +317,13 @@ export default function AdmissaoPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchDashboardData}
         hrUserId={currentUser?.id || ""}
+      />
+
+      {/* Modal de Cadastro Manual */}
+      <ManualUserModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onSuccess={fetchDashboardData}
       />
     </section>
   );

@@ -26,6 +26,9 @@ export async function GET(request: Request) {
       dayOffsPending,
       dayOffsApproved,
       dayOffsRejected,
+      reviewList,
+      invitedList,
+      recentApprovals,
     ] = await Promise.all([
       // 1. Company Data
       prisma.companyData.findFirst(),
@@ -97,6 +100,42 @@ export async function GET(request: Request) {
       prisma.dayOff.count({ where: { status: "PENDING" } }),
       prisma.dayOff.count({ where: { status: "APPROVED" } }),
       prisma.dayOff.count({ where: { status: { in: ["REJECTED", "CANCELLED"] } } }),
+
+      // 9. Admissões detalhadas para o painel de admissão
+      prisma.admission.findMany({
+        where: { status: "UNDER_REVIEW" },
+        select: {
+          id: true,
+          candidateName: true,
+          candidateEmail: true,
+          candidateAvatar: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.admission.findMany({
+        where: { status: "INVITED" },
+        select: {
+          id: true,
+          candidateName: true,
+          candidateEmail: true,
+          candidateAvatar: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+      }),
+      prisma.admission.findMany({
+        where: { status: "ACTIVE" },
+        select: {
+          id: true,
+          candidateName: true,
+          candidateEmail: true,
+          candidateAvatar: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 10,
+      }),
     ]);
 
     // Map sectors distribution
@@ -214,7 +253,16 @@ export async function GET(request: Request) {
           pending: dayOffsPending,
           approved: dayOffsApproved,
           rejected: dayOffsRejected,
-        }
+        },
+        // Adicionado para suportar a tela de Admissões
+        cards: {
+          underReview: admissionsUnderReview,
+          active: admissionsActive,
+          invited: admissionsInvited,
+        },
+        reviewList,
+        invitedList,
+        recentApprovals,
       }
     });
   } catch (error: any) {
